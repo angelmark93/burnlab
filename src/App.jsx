@@ -226,6 +226,21 @@ const MUSCLE_REGIONS = {
     { m: "Calves", pts: CALF_L }, { m: "Calves", pts: mirrorX(CALF_L) },
   ],
 };
+/* Limbs built as stacks of overlapping, decreasing-radius circles rather than
+   uniform-width rects - gives a tapered, fleshed-out look instead of a stick
+   figure (same flat fill, no seams since the circles blend into one shape). */
+/* Each limb = 2 generously-overlapping ellipses (upper + lower segment) plus
+   a hand/foot cap - same blending trick as the torso, but with wide overlap
+   margins so the taper reads as one continuous limb, not a bead chain. */
+function Limb({ upper, lower, foot }) {
+  return (
+    <>
+      <ellipse cx={upper[0]} cy={upper[1]} rx={upper[2]} ry={upper[3]} />
+      <ellipse cx={lower[0]} cy={lower[1]} rx={lower[2]} ry={lower[3]} />
+      <ellipse cx={foot[0]} cy={foot[1]} rx={foot[2]} ry={foot[3]} />
+    </>
+  );
+}
 function BodySilhouette({ fem }) {
   return fem ? (
     <g fill="#262A34">
@@ -235,16 +250,10 @@ function BodySilhouette({ fem }) {
       <ellipse cx="80" cy="80" rx="29" ry="24" />
       <ellipse cx="80" cy="120" rx="18" ry="24" />
       <ellipse cx="80" cy="154" rx="31" ry="25" />
-      <rect x="25" y="60" width="18" height="110" rx="9" />
-      <rect x="117" y="60" width="18" height="110" rx="9" />
-      <ellipse cx="34" cy="176" rx="8" ry="10" />
-      <ellipse cx="126" cy="176" rx="8" ry="10" />
-      <rect x="50" y="170" width="27" height="93" rx="13.5" />
-      <rect x="83" y="170" width="27" height="93" rx="13.5" />
-      <rect x="55" y="256" width="18" height="84" rx="9" />
-      <rect x="87" y="256" width="18" height="84" rx="9" />
-      <ellipse cx="64" cy="344" rx="13" ry="7" />
-      <ellipse cx="96.5" cy="344" rx="13" ry="7" />
+      <Limb upper={[30, 92, 12, 34]} lower={[28, 138, 8.5, 30]} foot={[32, 172, 8, 9]} />
+      <Limb upper={[130, 92, 12, 34]} lower={[132, 138, 8.5, 30]} foot={[128, 172, 8, 9]} />
+      <Limb upper={[63, 200, 17, 38]} lower={[65, 278, 9.5, 44]} foot={[64, 332, 13, 7]} />
+      <Limb upper={[97, 200, 17, 38]} lower={[95, 278, 9.5, 44]} foot={[96, 332, 13, 7]} />
     </g>
   ) : (
     <g fill="#262A34">
@@ -254,16 +263,10 @@ function BodySilhouette({ fem }) {
       <ellipse cx="80" cy="82" rx="37" ry="27" />
       <ellipse cx="80" cy="122" rx="24" ry="25" />
       <ellipse cx="80" cy="155" rx="29" ry="24" />
-      <rect x="17" y="62" width="23" height="112" rx="11.5" />
-      <rect x="120" y="62" width="23" height="112" rx="11.5" />
-      <ellipse cx="28.5" cy="180" rx="10" ry="12" />
-      <ellipse cx="131.5" cy="180" rx="10" ry="12" />
-      <rect x="48" y="170" width="30" height="95" rx="15" />
-      <rect x="82" y="170" width="30" height="95" rx="15" />
-      <rect x="53" y="258" width="20" height="85" rx="10" />
-      <rect x="87" y="258" width="20" height="85" rx="10" />
-      <ellipse cx="63" cy="348" rx="15" ry="8" />
-      <ellipse cx="97" cy="348" rx="15" ry="8" />
+      <Limb upper={[23, 96, 15, 38]} lower={[20, 148, 10.5, 36]} foot={[25, 180, 10, 11]} />
+      <Limb upper={[137, 96, 15, 38]} lower={[140, 148, 10.5, 36]} foot={[135, 180, 10, 11]} />
+      <Limb upper={[63, 205, 19, 42]} lower={[65, 290, 11, 50]} foot={[63, 346, 14, 8]} />
+      <Limb upper={[97, 205, 19, 42]} lower={[95, 290, 11, 50]} foot={[97, 346, 14, 8]} />
     </g>
   );
 }
@@ -883,26 +886,58 @@ const SectionLabel = ({ children }) => (
     <div className="flex-1 h-px" style={{ background: C.line }} />
   </div>
 );
-function Ring({ pct, color, label, value, size = 64, sub }) {
-  const h = size / 2, r = h - 6, circ = 2 * Math.PI * r, filled = Math.min(1, pct) * circ, complete = pct >= 1;
-  const TICKS = 28;
+/* Apple-Activity-style concentric rings: nested thick bands, glossy gradient,
+   animated fill-in on mount, a glowing "cap" dot chasing the arc tip. */
+function ActivityRings({ rings, size = 176 }) {
+  const [animate, setAnimate] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setAnimate(true), 100); return () => clearTimeout(t); }, []);
+  const cx = size / 2, cy = size / 2, strokeW = size * 0.1, gap = size * 0.024;
   return (
-    <div className="flex flex-col items-center gap-1" style={{ width: size + 8 }}>
-      <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} role="img" aria-label={label + ": " + value}>
-        <g opacity="0.55" aria-hidden="true">
-          {Array.from({ length: TICKS }, (_, i) => (
-            <line key={i} x1={h} y1={1.5} x2={h} y2={4} stroke={C.line} strokeWidth="1.5" transform={"rotate(" + (360 / TICKS) * i + " " + h + " " + h + ")"} />
+    <div className="flex flex-col items-center">
+      <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} role="img" aria-label="Weekly activity rings">
+        <defs>
+          {rings.map((r, i) => (
+            <linearGradient key={i} id={"blring" + i} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={r.color} stopOpacity="0.7" />
+              <stop offset="100%" stopColor={r.color} stopOpacity="1" />
+            </linearGradient>
           ))}
-        </g>
-        <circle cx={h} cy={h} r={r} fill="none" stroke={C.line} strokeWidth="6" />
-        <circle cx={h} cy={h} r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
-          className={complete ? "bl-ring-pulse" : ""}
-          style={{ filter: "drop-shadow(0 0 5px " + color + (complete ? "dd" : "88") + ")", transition: "stroke-dasharray 0.6s ease" }}
-          strokeDasharray={filled + " " + (circ - filled)} transform={"rotate(-90 " + h + " " + h + ")"} />
-        <text x={h} y={sub ? h + 1 : h + 5} textAnchor="middle" fill={C.text} style={{ fontFamily: F.disp, fontSize: size * 0.28, fontWeight: 700 }}>{value}</text>
-        {sub && <text x={h} y={h + size * 0.2} textAnchor="middle" fill={C.dim} style={{ fontFamily: F.mono, fontSize: size * 0.11 }}>{sub}</text>}
+        </defs>
+        {rings.map((r, i) => {
+          const radius = cx - strokeW / 2 - i * (strokeW + gap);
+          const circ = 2 * Math.PI * radius;
+          const pct = r.target ? r.value / r.target : 0;
+          const shown = animate ? Math.min(1, pct) : 0;
+          const filled = shown * circ;
+          const complete = pct >= 1;
+          const dotAngle = shown * 360;
+          return (
+            <g key={i}>
+              <circle cx={cx} cy={cy} r={radius} fill="none" stroke={C.card2} strokeWidth={strokeW} />
+              <circle cx={cx} cy={cy} r={radius} fill="none" stroke={"url(#blring" + i + ")"} strokeWidth={strokeW} strokeLinecap="round"
+                className={complete ? "bl-ring-pulse" : ""}
+                style={{ transition: "stroke-dasharray 1.1s cubic-bezier(0.22,0.9,0.3,1)" }}
+                strokeDasharray={filled + " " + (circ - filled)} transform={"rotate(-90 " + cx + " " + cy + ")"} />
+              {shown > 0.02 && (
+                <g style={{ transform: "rotate(" + dotAngle + "deg)", transformOrigin: cx + "px " + cy + "px", transition: "transform 1.1s cubic-bezier(0.22,0.9,0.3,1)" }}>
+                  <circle cx={cx} cy={cy - radius} r={strokeW * 0.46} fill={r.color} style={{ filter: "drop-shadow(0 0 4px " + r.color + "cc)" }} />
+                </g>
+              )}
+            </g>
+          );
+        })}
       </svg>
-      <span style={{ fontFamily: F.mono, fontSize: 9.5, color: C.dim, letterSpacing: 0.5 }}>{label.toUpperCase()}</span>
+      <div className="flex gap-4 mt-3 flex-wrap justify-center">
+        {rings.map((r, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color, boxShadow: "0 0 5px " + r.color + "aa" }} />
+            <div>
+              <div style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: C.text }}>{r.value}<span style={{ color: C.faint }}>/{r.target}</span></div>
+              <div style={{ fontFamily: F.mono, fontSize: 8, color: C.faint, letterSpacing: 1 }}>{r.label.toUpperCase()}</div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -2004,12 +2039,14 @@ export default function BurnLabApp() {
                     );
                   })()}
 
-                  {/* weekly targets trio */}
+                  {/* weekly targets trio - Apple Activity-style concentric rings */}
                   <SectionLabel>THIS WEEK VS TARGET</SectionLabel>
-                  <div className="rounded-3xl px-3 py-4 mb-4 flex items-center justify-around" style={{ background: C.card, border: "1px solid " + C.line }}>
-                    <Ring size={76} label="Muscles" color={C.blue} value={weekAgg.muscles} sub={Math.max(0, weekAgg.musclesT - weekAgg.muscles) + " left"} pct={weekAgg.muscles / weekAgg.musclesT} />
-                    <Ring size={104} label="Sets" color={A.a} value={weekAgg.sets} sub={Math.max(0, weekAgg.setsT - weekAgg.sets) + " left"} pct={weekAgg.sets / weekAgg.setsT} />
-                    <Ring size={76} label="Exercises" color={"#5CE0D8"} value={weekAgg.exs} sub={Math.max(0, weekAgg.exsT - weekAgg.exs) + " left"} pct={weekAgg.exs / weekAgg.exsT} />
+                  <div className="rounded-3xl px-3 py-5 mb-4" style={{ background: C.card, border: "1px solid " + C.line, boxShadow: SHADOW.card }}>
+                    <ActivityRings rings={[
+                      { label: "Sets", color: A.a, value: weekAgg.sets, target: weekAgg.setsT },
+                      { label: "Muscles", color: C.blue, value: weekAgg.muscles, target: weekAgg.musclesT },
+                      { label: "Exercises", color: "#5CE0D8", value: weekAgg.exs, target: weekAgg.exsT },
+                    ]} />
                   </div>
 
                   {/* stats */}
