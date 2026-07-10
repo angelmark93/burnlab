@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useId } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid,
 } from "recharts";
 import {
@@ -171,6 +171,135 @@ function Picto({ ex, size = 48 }) {
       <g stroke="#8A8F99" strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round" fill="none">{p.gear}</g>
       <g stroke={col} strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round" fill="none">{p.body}</g>
     </svg>
+  );
+}
+
+/* ================= ANATOMY BODY DIAGRAM =================
+   Simplified vector silhouette (overlapping rounded shapes, not anatomical
+   paths) with soft blurred glow regions per muscle group - used both as the
+   "target muscles" picker in onboarding and the muscle-heat map in Progress. */
+const MUSCLE_REGIONS = {
+  front: [
+    { m: "Shoulders", cx: 38, cy: 58, rx: 14, ry: 13 },
+    { m: "Shoulders", cx: 122, cy: 58, rx: 14, ry: 13 },
+    { m: "Chest", cx: 80, cy: 82, rx: 28, ry: 18 },
+    { m: "Biceps", cx: 29, cy: 95, rx: 10, ry: 24 },
+    { m: "Biceps", cx: 131, cy: 95, rx: 10, ry: 24 },
+    { m: "Abs", cx: 80, cy: 124, rx: 17, ry: 28 },
+    { m: "Quads", cx: 63, cy: 210, rx: 15, ry: 42 },
+    { m: "Quads", cx: 97, cy: 210, rx: 15, ry: 42 },
+  ],
+  back: [
+    { m: "Shoulders", cx: 38, cy: 58, rx: 14, ry: 13 },
+    { m: "Shoulders", cx: 122, cy: 58, rx: 14, ry: 13 },
+    { m: "Back", cx: 80, cy: 100, rx: 34, ry: 42 },
+    { m: "Triceps", cx: 29, cy: 100, rx: 10, ry: 28 },
+    { m: "Triceps", cx: 131, cy: 100, rx: 10, ry: 28 },
+    { m: "Glutes", cx: 80, cy: 160, rx: 27, ry: 20 },
+    { m: "Hamstrings", cx: 63, cy: 215, rx: 14, ry: 35 },
+    { m: "Hamstrings", cx: 97, cy: 215, rx: 14, ry: 35 },
+    { m: "Calves", cx: 65, cy: 300, rx: 11, ry: 35 },
+    { m: "Calves", cx: 95, cy: 300, rx: 11, ry: 35 },
+  ],
+};
+function BodySilhouette({ fem }) {
+  return fem ? (
+    <g fill="#262A34">
+      <ellipse cx="80" cy="24" rx="16" ry="18" />
+      <rect x="71" y="39" width="18" height="12" rx="5" />
+      <ellipse cx="80" cy="58" rx="37" ry="14" />
+      <ellipse cx="80" cy="80" rx="29" ry="24" />
+      <ellipse cx="80" cy="120" rx="18" ry="24" />
+      <ellipse cx="80" cy="154" rx="31" ry="25" />
+      <rect x="25" y="60" width="18" height="110" rx="9" />
+      <rect x="117" y="60" width="18" height="110" rx="9" />
+      <ellipse cx="34" cy="176" rx="8" ry="10" />
+      <ellipse cx="126" cy="176" rx="8" ry="10" />
+      <rect x="50" y="170" width="27" height="93" rx="13.5" />
+      <rect x="83" y="170" width="27" height="93" rx="13.5" />
+      <rect x="55" y="256" width="18" height="84" rx="9" />
+      <rect x="87" y="256" width="18" height="84" rx="9" />
+      <ellipse cx="64" cy="344" rx="13" ry="7" />
+      <ellipse cx="96.5" cy="344" rx="13" ry="7" />
+    </g>
+  ) : (
+    <g fill="#262A34">
+      <ellipse cx="80" cy="24" rx="16" ry="18" />
+      <rect x="71" y="39" width="18" height="12" rx="5" />
+      <ellipse cx="80" cy="58" rx="46" ry="15" />
+      <ellipse cx="80" cy="82" rx="37" ry="27" />
+      <ellipse cx="80" cy="122" rx="24" ry="25" />
+      <ellipse cx="80" cy="155" rx="29" ry="24" />
+      <rect x="17" y="62" width="23" height="112" rx="11.5" />
+      <rect x="120" y="62" width="23" height="112" rx="11.5" />
+      <ellipse cx="28.5" cy="180" rx="10" ry="12" />
+      <ellipse cx="131.5" cy="180" rx="10" ry="12" />
+      <rect x="48" y="170" width="30" height="95" rx="15" />
+      <rect x="82" y="170" width="30" height="95" rx="15" />
+      <rect x="53" y="258" width="20" height="85" rx="10" />
+      <rect x="87" y="258" width="20" height="85" rx="10" />
+      <ellipse cx="63" cy="348" rx="15" ry="8" />
+      <ellipse cx="97" cy="348" rx="15" ry="8" />
+    </g>
+  );
+}
+/* mode="pick": selected muscles glow `accent`, tap toggles via onToggle.
+   mode="heat": every region colored by heatMap[muscle] = { ratio, daysSince }. */
+function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size = 190 }) {
+  const [view, setView] = useState("front");
+  const [tap, setTap] = useState(null);
+  const uid = useId();
+  const regions = MUSCLE_REGIONS[view];
+  const glowId = "bl-anat-glow-" + uid;
+  return (
+    <div className="flex flex-col items-center">
+      <div className="flex gap-1 mb-3 rounded-full p-1" style={{ background: C.card2, border: "1px solid " + C.line }}>
+        {["front", "back"].map(v => (
+          <button key={v} type="button" onClick={() => { setView(v); setTap(null); }} className="px-4 py-1.5 rounded-full text-xs font-bold transition-colors"
+            style={{ background: view === v ? C.text : "transparent", color: view === v ? C.bg : C.dim }}>
+            {v === "front" ? "Front" : "Back"}
+          </button>
+        ))}
+      </div>
+      <svg width={size} height={Math.round(size * 366 / 160)} viewBox="0 0 160 366" role="img" aria-label={view + " body diagram"}>
+        <defs>
+          <filter id={glowId} x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+        </defs>
+        <BodySilhouette fem={fem} />
+        <g style={{ mixBlendMode: "screen" }} filter={"url(#" + glowId + ")"}>
+          {regions.map((r, i) => {
+            const picked = mode === "pick" && selected.includes(r.m);
+            const color = mode === "pick" ? accent : heatColor((heatMap && heatMap[r.m] && heatMap[r.m].ratio) || 0, MUSCLES[r.m]);
+            const opacity = mode === "pick" ? (picked ? 0.85 : 0) : 0.75;
+            return <ellipse key={r.m + i} cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry} fill={color} opacity={opacity}
+              className={mode === "heat" && heatMap && heatMap[r.m] && heatMap[r.m].ratio > 1.1 ? "bl-pulse" : ""} />;
+          })}
+        </g>
+        <g style={{ mixBlendMode: "screen" }}>
+          {regions.map((r, i) => {
+            const picked = mode === "pick" && selected.includes(r.m);
+            if (mode === "pick" && !picked) return null;
+            const color = mode === "pick" ? accent : heatColor((heatMap && heatMap[r.m] && heatMap[r.m].ratio) || 0, MUSCLES[r.m]);
+            return <ellipse key={"core" + r.m + i} cx={r.cx} cy={r.cy} rx={r.rx * 0.5} ry={r.ry * 0.5} fill={color} opacity={mode === "pick" ? 0.9 : 0.5} />;
+          })}
+        </g>
+        {(mode === "pick" || mode === "heat") && regions.map((r, i) => (
+          <ellipse key={"hit" + r.m + i} cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry} fill="transparent" style={{ cursor: "pointer" }}
+            role="button" aria-label={r.m}
+            onClick={() => (mode === "pick" ? onToggle && onToggle(r.m) : setTap(r.m))} />
+        ))}
+      </svg>
+      {mode === "heat" && tap && heatMap && heatMap[tap] && (
+        <div className="mt-2 text-center bl-fade">
+          <span className="text-sm font-bold">{tap}</span>
+          <span className="text-xs ml-2" style={{ color: C.dim, fontFamily: F.mono }}>
+            {heatMap[tap].daysSince === Infinity ? "never trained" : "trained " + Math.round(heatMap[tap].daysSince) + "d ago"}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -573,6 +702,46 @@ function weeklySets(history) {
   return tally;
 }
 
+/* ---- muscle heat: recency-weighted training load per muscle group ---- */
+function muscleHeat(history, muscle, weeklyTarget) {
+  const now = Date.now();
+  const HALF_LIFE_DAYS = 5;
+  let weighted = 0, lastMs = -Infinity;
+  for (const w of history) {
+    const t = new Date(w.date).getTime();
+    const daysAgo = (now - t) / 864e5;
+    if (daysAgo < 0) continue;
+    let touched = false;
+    for (const e of w.exercises) {
+      const ex = EX[e.id]; if (!ex) continue;
+      const isPrimary = ex.muscle === muscle;
+      const isSecondary = !isPrimary && ex.secondary.includes(muscle);
+      if (!isPrimary && !isSecondary) continue;
+      touched = true;
+      weighted += e.sets.length * (isPrimary ? 1 : 0.5) * Math.pow(0.5, daysAgo / HALF_LIFE_DAYS);
+    }
+    if (touched && t > lastMs) lastMs = t;
+  }
+  const daysSince = lastMs === -Infinity ? Infinity : (now - lastMs) / 864e5;
+  return { ratio: weighted / (weeklyTarget || 15), daysSince };
+}
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function lerpColor(a, b, t) {
+  const [ar, ag, ab] = hexToRgb(a), [br, bg, bb] = hexToRgb(b);
+  return "rgb(" + Math.round(ar + (br - ar) * t) + "," + Math.round(ag + (bg - ag) * t) + "," + Math.round(ab + (bb - ab) * t) + ")";
+}
+function heatColor(ratio, baseHex) {
+  const COLD = "#3A4050", HOT = "#FF3B30", WHITEHOT = "#FFE38A";
+  const r = Math.max(0, ratio);
+  if (r <= 1) return lerpColor(COLD, baseHex, r);
+  if (r <= 2) return lerpColor(baseHex, HOT, r - 1);
+  return lerpColor(HOT, WHITEHOT, Math.min(1, r - 2));
+}
+
 /* ---- equipment / substitutions ---- */
 const GYM_EQ = { full: null, home: ["Dumbbells", "Bodyweight"], bw: ["Bodyweight"] };
 const GYM_LABEL = { full: "Full gym", home: "Dumbbells & bench", bw: "Bodyweight only" };
@@ -707,12 +876,20 @@ const SectionLabel = ({ children }) => (
   </div>
 );
 function Ring({ pct, color, label, value, size = 64, sub }) {
-  const h = size / 2, r = h - 6, circ = 2 * Math.PI * r, filled = Math.min(1, pct) * circ;
+  const h = size / 2, r = h - 6, circ = 2 * Math.PI * r, filled = Math.min(1, pct) * circ, complete = pct >= 1;
+  const TICKS = 28;
   return (
     <div className="flex flex-col items-center gap-1" style={{ width: size + 8 }}>
       <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} role="img" aria-label={label + ": " + value}>
+        <g opacity="0.55" aria-hidden="true">
+          {Array.from({ length: TICKS }, (_, i) => (
+            <line key={i} x1={h} y1={1.5} x2={h} y2={4} stroke={C.line} strokeWidth="1.5" transform={"rotate(" + (360 / TICKS) * i + " " + h + " " + h + ")"} />
+          ))}
+        </g>
         <circle cx={h} cy={h} r={r} fill="none" stroke={C.line} strokeWidth="6" />
-        <circle cx={h} cy={h} r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 5px " + color + "88)" }}
+        <circle cx={h} cy={h} r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
+          className={complete ? "bl-ring-pulse" : ""}
+          style={{ filter: "drop-shadow(0 0 5px " + color + (complete ? "dd" : "88") + ")", transition: "stroke-dasharray 0.6s ease" }}
           strokeDasharray={filled + " " + (circ - filled)} transform={"rotate(-90 " + h + " " + h + ")"} />
         <text x={h} y={sub ? h + 1 : h + 5} textAnchor="middle" fill={C.text} style={{ fontFamily: F.disp, fontSize: size * 0.28, fontWeight: 700 }}>{value}</text>
         {sub && <text x={h} y={h + size * 0.2} textAnchor="middle" fill={C.dim} style={{ fontFamily: F.mono, fontSize: size * 0.11 }}>{sub}</text>}
@@ -761,8 +938,14 @@ const GradBtn = ({ A, onClick, children, className = "", style = {} }) => (
 /* ================= ONBOARDING ================= */
 function Onboarding({ A, onDone }) {
   const [step, setStep] = useState(0);
-  const [p, setP] = useState({ name: "", age: "", sex: "", heightCm: "", weightKg: "", activity: "", gym: "", exp: "", goal: "" });
+  const [p, setP] = useState({ name: "", age: "", sex: "", heightCm: "", weightKg: "", activity: "", gym: "", exp: "", goal: "", focusMuscles: [] });
   const set = (k, v) => setP(prev => ({ ...prev, [k]: v }));
+  const toggleFocus = m => setP(prev => {
+    const has = prev.focusMuscles.includes(m);
+    if (has) return { ...prev, focusMuscles: prev.focusMuscles.filter(x => x !== m) };
+    if (prev.focusMuscles.length >= 2) return prev;
+    return { ...prev, focusMuscles: [...prev.focusMuscles, m] };
+  });
   const targets = useMemo(() => calcTargets(p), [p]);
   const AG = "linear-gradient(90deg," + A.a + "," + A.b + ")";
 
@@ -785,7 +968,7 @@ function Onboarding({ A, onDone }) {
   const valid = [
     true,
     p.age && p.heightCm && p.weightKg && p.sex,
-    !!p.activity, !!p.gym, !!p.exp, !!p.goal, true,
+    !!p.activity, !!p.gym, !!p.exp, !!p.goal, true, true,
   ][step];
 
   const finish = () => {
@@ -799,7 +982,7 @@ function Onboarding({ A, onDone }) {
       <div className="flex items-center gap-3 mb-6">
         {step > 0 && <button onClick={() => setStep(step - 1)} aria-label="Back" className="p-1.5 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }}><ChevronLeft size={16} color={C.dim} /></button>}
         <div className="flex gap-1.5 flex-1">
-          {[0, 1, 2, 3, 4, 5, 6].map(i => (
+          {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
             <div key={i} className="h-1 flex-1 rounded-full transition-colors" style={{ background: i <= step ? A.a : C.line }} />
           ))}
         </div>
@@ -819,7 +1002,7 @@ function Onboarding({ A, onDone }) {
         </div>)}
 
         {step === 1 && (<div className="bl-fade">
-          <H kicker="STEP 1 OF 6" title="About you" sub="Used only to calculate your calorie and protein targets. Stored on this device, nowhere else." />
+          <H kicker="STEP 1 OF 7" title="About you" sub="Used only to calculate your calorie and protein targets. Stored on this device, nowhere else." />
           <div className="grid grid-cols-3 gap-2 mb-2">
             <div><label className="block mb-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>AGE</label>
               <input type="number" inputMode="numeric" value={p.age} onChange={e => set("age", e.target.value)} placeholder="30" className="w-full rounded-xl px-3 py-3 text-center" style={inputStyle} /></div>
@@ -835,7 +1018,7 @@ function Onboarding({ A, onDone }) {
         </div>)}
 
         {step === 2 && (<div className="bl-fade">
-          <H kicker="STEP 2 OF 6" title="How active is your day-to-day?" sub="Outside the gym - job, steps, general movement." />
+          <H kicker="STEP 2 OF 7" title="How active is your day-to-day?" sub="Outside the gym - job, steps, general movement." />
           <Opt k="activity" v="sed" title="Mostly sitting" sub="Desk job, under ~5k steps" />
           <Opt k="activity" v="light" title="Lightly active" sub="Some walking, ~5-8k steps" />
           <Opt k="activity" v="mod" title="Active" sub="On your feet a lot, ~8-12k steps" />
@@ -843,21 +1026,21 @@ function Onboarding({ A, onDone }) {
         </div>)}
 
         {step === 3 && (<div className="bl-fade">
-          <H kicker="STEP 3 OF 6" title="What kit do you have?" sub="Every exercise adapts to your setup - and you can swap any movement later." />
+          <H kicker="STEP 3 OF 7" title="What kit do you have?" sub="Every exercise adapts to your setup - and you can swap any movement later." />
           <Opt k="gym" v="full" title="Full gym" sub="Barbells, machines, cables - the lot" />
           <Opt k="gym" v="home" title="Dumbbells & a bench" sub="Home setup or hotel gym" />
           <Opt k="gym" v="bw" title="Bodyweight only" sub="A pull-up bar helps but we'll work with anything" />
         </div>)}
 
         {step === 4 && (<div className="bl-fade">
-          <H kicker="STEP 4 OF 6" title="Training experience?" sub="This sets how often each muscle gets trained." />
+          <H kicker="STEP 4 OF 7" title="Training experience?" sub="This sets how often each muscle gets trained." />
           <Opt k="exp" v="new" title="New to lifting" sub="Under a year of consistent training" />
           <Opt k="exp" v="mid" title="1-2 years" sub="Comfortable with the main lifts" />
           <Opt k="exp" v="adv" title="3+ years" sub="Ready for higher volume" />
         </div>)}
 
         {step === 5 && (<div className="bl-fade">
-          <H kicker="STEP 5 OF 6" title="What's the goal?" sub="This drives your calories, your split and your meal templates." />
+          <H kicker="STEP 5 OF 7" title="What's the goal?" sub="This drives your calories, your split and your meal templates." />
           <Opt k="goal" v="build" title="Build muscle" sub="Modest surplus, hypertrophy focus" />
           <Opt k="goal" v="cut" title="Lose fat" sub="Sensible deficit, keep the muscle" />
           <Opt k="goal" v="recomp" title="Recomposition" sub="Maintenance calories, slow and steady" />
@@ -865,6 +1048,25 @@ function Onboarding({ A, onDone }) {
         </div>)}
 
         {step === 6 && (<div className="bl-fade">
+          <H kicker="STEP 6 OF 7" title="Any muscles need extra attention?" sub="Pick up to 2 - we'll add bonus volume and raise the weekly target for them. Totally optional." />
+          <AnatomyBody fem={p.sex === "f"} mode="pick" selected={p.focusMuscles} onToggle={toggleFocus} accent={A.a} size={170} />
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            {Object.keys(MUSCLES).map(m => {
+              const picked = p.focusMuscles.includes(m);
+              const disabled = !picked && p.focusMuscles.length >= 2;
+              return (
+                <button key={m} type="button" onClick={() => toggleFocus(m)} disabled={disabled}
+                  className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors"
+                  style={{ background: picked ? A.a + "1F" : C.card, border: "1px solid " + (picked ? A.a : C.line), color: disabled ? C.faint : C.text, opacity: disabled ? 0.5 : 1 }}>
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs mt-3" style={{ color: C.faint }}>{p.focusMuscles.length}/2 selected - you can change this anytime in Settings.</p>
+        </div>)}
+
+        {step === 7 && (<div className="bl-fade">
           <H kicker="YOUR NUMBERS" title={"Locked in, " + (p.name.trim() || "Athlete")} sub="Calculated with the Mifflin-St Jeor equation from what you told us. Fine-tune any of this later in Settings." />
           <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid " + A.a + "44", boxShadow: SHADOW.card }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>DAILY TARGET - {(GOAL_LABEL[p.goal] || "").toUpperCase()}</div>
@@ -892,12 +1094,18 @@ function Onboarding({ A, onDone }) {
             </div>
             <Chip color={A.a}>{GYM_LABEL[p.gym]}</Chip>
           </div>
+          {p.focusMuscles.length > 0 && (
+            <div className="rounded-xl px-4 py-3 mt-3 flex items-center justify-between" style={{ background: C.card, border: "1px solid " + C.line }}>
+              <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1.5 }}>FOCUS</span>
+              <div className="flex gap-1.5">{p.focusMuscles.map(m => <Chip key={m} color={MUSCLES[m]}>{m.toUpperCase()}</Chip>)}</div>
+            </div>
+          )}
           <p className="text-xs mt-3" style={{ color: C.faint }}>Estimates for healthy adults - adjust based on real-world results, and speak to a professional for personalised dietary advice.</p>
         </div>)}
       </div>
 
       <div className="pt-4">
-        {step < 6 ? (
+        {step < 7 ? (
           <button onClick={() => valid && setStep(step + 1)} disabled={!valid}
             className="w-full py-3.5 rounded-2xl font-bold transition-transform active:scale-95"
             style={{ background: valid ? AG : C.card2, color: valid ? "#0D0E11" : C.faint, fontFamily: F.disp, fontSize: 19, letterSpacing: 1 }}>
@@ -1413,6 +1621,8 @@ export default function BurnLabApp() {
   const AG = "linear-gradient(90deg," + A.a + "," + A.b + ")";
   const SHIMMER = "linear-gradient(90deg," + A.a + "," + A.b + ",#F2F0EA," + A.a + ")";
   const gym = (data.profile && data.profile.gym) || "full";
+  const focusMuscles = (data.profile && data.profile.focusMuscles) || [];
+  const muscleTarget = m => data.settings.weeklyTarget + (focusMuscles.includes(m) ? 4 : 0);
   const program = data.program ? PROGRAMS[data.program] : null;
 
   const nextDayIdx = useMemo(() => {
@@ -1439,6 +1649,7 @@ export default function BurnLabApp() {
   }, [data.history, program, data.program]);
 
   const week = useMemo(() => weeklySets(data.history), [data.history]);
+  const heatMap = useMemo(() => Object.fromEntries(Object.keys(MUSCLES).map(m => [m, muscleHeat(data.history, m, muscleTarget(m))])), [data.history, data.settings.weeklyTarget, focusMuscles]);
   const workoutsThisWeek = data.history.filter(h => new Date(h.date).getTime() > Date.now() - 7 * 864e5).length;
   const scienceTip = SCIENCE[new Date().getDate() % SCIENCE.length];
   const troph = useMemo(() => achievements(data, photos), [data, photos]);
@@ -1452,7 +1663,11 @@ export default function BurnLabApp() {
 
   /* ---------- session actions ---------- */
   const startSession = (progKey, day) => {
-    const items = day.items.map(it => ({ ...it, origEx: it.ex, ex: resolveEx(it.ex, data.subs, gym) }));
+    const items = day.items.map(it => {
+      const ex = resolveEx(it.ex, data.subs, gym);
+      const focus = EX[ex] && focusMuscles.includes(EX[ex].muscle);
+      return { ...it, origEx: it.ex, ex, sets: focus ? Math.min(it.sets + 1, 6) : it.sets, focus };
+    });
     const entries = items.map(it => {
       const prev = lastPerf(data.history, it.ex);
       const sug = suggest(data.history, it);
@@ -1800,7 +2015,7 @@ export default function BurnLabApp() {
                       { label: "ALL TIME", val: data.history.length, unit: "workouts", icon: <Dumbbell size={13} color={C.blue} /> },
                       { label: "TROPHIES", val: troph.filter(t => t.done).length + "/" + troph.length, unit: "unlocked", icon: <Trophy size={13} color={C.yellow} /> },
                     ].map((s, i) => (
-                      <div key={i} className="rounded-xl p-3" style={{ background: C.card, border: "1px solid " + C.line }}>
+                      <div key={i} className="rounded-xl p-3 bl-stagger" style={{ background: C.card, border: "1px solid " + C.line, "--i": i }}>
                         <div className="flex items-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>{s.icon}{s.label}</div>
                         <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1.2 }}>{s.val}</div>
                         <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.dim }}>{s.unit}</div>
@@ -1809,10 +2024,10 @@ export default function BurnLabApp() {
                   </div>
 
                   {/* weekly volume rings */}
-                  <SectionLabel>WEEKLY SETS PER MUSCLE · TARGET {data.settings.weeklyTarget}</SectionLabel>
+                  <SectionLabel>WEEKLY SETS PER MUSCLE · TARGET {data.settings.weeklyTarget}{focusMuscles.length ? " (+4 FOCUS)" : ""}</SectionLabel>
                   <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-y-3 justify-between" style={{ background: C.card, border: "1px solid " + C.line }}>
                     {Object.keys(MUSCLES).slice(0, 8).map(m => (
-                      <Ring key={m} label={m} color={MUSCLES[m]} value={Math.round(week[m] || 0)} pct={(week[m] || 0) / data.settings.weeklyTarget} />
+                      <Ring key={m} label={m} color={MUSCLES[m]} value={Math.round(week[m] || 0)} pct={(week[m] || 0) / muscleTarget(m)} sub={focusMuscles.includes(m) ? "🎯" : undefined} />
                     ))}
                   </div>
 
@@ -1853,7 +2068,10 @@ export default function BurnLabApp() {
                                 <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, textTransform: "uppercase" }}>{day.name}</span>
                                 {di === nextDayIdx && <Chip color={A.a}>UP NEXT</Chip>}
                               </div>
-                              <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{day.items.length} exercises · {day.items.reduce((a, i) => a + i.sets, 0)} sets</div>
+                              <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{day.items.length} exercises · {day.items.reduce((a, i) => {
+                                const rid = resolveEx(i.ex, data.subs, gym);
+                                return a + (focusMuscles.includes(EX[rid].muscle) ? Math.min(i.sets + 1, 6) : i.sets);
+                              }, 0)} sets</div>
                             </div>
                             {di === nextDayIdx ? (
                               <GradBtn A={A} onClick={() => startSession(data.program, day)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm"><Play size={14} /> Start</GradBtn>
@@ -1864,14 +2082,17 @@ export default function BurnLabApp() {
                           <div className="px-4 py-3 mt-2" style={{ borderTop: "1px solid " + C.line }}>
                             {day.items.map((it, i) => {
                               const rid = resolveEx(it.ex, data.subs, gym);
+                              const focus = focusMuscles.includes(EX[rid].muscle);
+                              const sets = focus ? Math.min(it.sets + 1, 6) : it.sets;
                               return (
                                 <div key={i} className="flex items-center justify-between py-1.5">
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: MUSCLES[EX[rid].muscle] }} />
                                     <span className="text-sm truncate">{EX[rid].name}</span>
                                     {rid !== it.ex && <Repeat size={11} color={C.faint} className="shrink-0" />}
+                                    {focus && <Chip color={A.a}>🎯 FOCUS</Chip>}
                                   </div>
-                                  <span style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{it.sets}×{it.lo}-{it.hi} @{it.rpe}</span>
+                                  <span style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{sets}×{it.lo}-{it.hi} @{it.rpe}</span>
                                 </div>
                               );
                             })}
@@ -1929,7 +2150,10 @@ export default function BurnLabApp() {
                           <button onClick={() => setOpenIdx(open ? null : idx)} className="flex items-center gap-2.5 text-left min-w-0 flex-1">
                             <Picto ex={ex} size={40} />
                             <div className="min-w-0">
-                              <div className="font-semibold text-sm truncate">{ex.name}</div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="font-semibold text-sm truncate">{ex.name}</div>
+                                {it.focus && <Chip color={A.a}>🎯</Chip>}
+                              </div>
                               <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{it.sets} × {it.lo}-{it.hi} @ RPE {it.rpe} · rest {Math.round(it.rest / 60)}m</div>
                             </div>
                           </button>
@@ -2168,8 +2392,8 @@ export default function BurnLabApp() {
                   {["platinum", "gold", "silver", "bronze"].map(tier => (
                     <div key={tier}>
                       {troph.some(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat)) && <SectionLabel>{tier.toUpperCase()}</SectionLabel>}
-                      {troph.filter(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat)).map(t => (
-                        <div key={t.id} className="rounded-xl px-4 py-3 mb-2 flex items-center gap-3" style={{ background: C.card, border: "1px solid " + (t.done ? TIER[t.tier] + "66" : C.line), opacity: t.done ? 1 : 0.75, boxShadow: t.done ? "0 6px 20px -8px " + TIER[t.tier] + "77" : "none" }}>
+                      {troph.filter(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat)).map((t, i) => (
+                        <div key={t.id} className="rounded-xl px-4 py-3 mb-2 flex items-center gap-3 bl-stagger-slide" style={{ background: C.card, border: "1px solid " + (t.done ? TIER[t.tier] + "66" : C.line), opacity: t.done ? 1 : 0.75, boxShadow: t.done ? "0 6px 20px -8px " + TIER[t.tier] + "77" : "none", "--i": i }}>
                           <div className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 42, height: 42, background: t.done ? TIER[t.tier] + "22" : C.card2, border: "2px solid " + (t.done ? TIER[t.tier] : C.line) }}>
                             {t.done ? <Trophy size={18} color={TIER[t.tier]} /> : <Lock size={15} color={C.faint} />}
                           </div>
@@ -2221,13 +2445,19 @@ export default function BurnLabApp() {
                           {pts.length >= 2 ? (
                             <div className="mt-2 -mx-1">
                               <ResponsiveContainer width="100%" height={150}>
-                                <LineChart data={pts} margin={{ top: 12, right: 8, left: -22, bottom: 0 }}>
+                                <AreaChart data={pts} margin={{ top: 12, right: 8, left: -22, bottom: 0 }}>
+                                  <defs>
+                                    <linearGradient id="blWeightFill" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={C.green} stopOpacity={0.45} />
+                                      <stop offset="100%" stopColor={C.green} stopOpacity={0} />
+                                    </linearGradient>
+                                  </defs>
                                   <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
                                   <XAxis dataKey="d" tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={{ stroke: C.line }} tickLine={false} minTickGap={22} />
                                   <YAxis tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
                                   <Tooltip contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} labelStyle={{ color: C.dim }} formatter={v => [v + " kg", "weight"]} />
-                                  <Line type="monotone" dataKey="v" stroke={C.green} strokeWidth={2.5} dot={{ fill: C.green, r: 3.5, strokeWidth: 0 }} activeDot={{ r: 5 }} />
-                                </LineChart>
+                                  <Area type="monotone" dataKey="v" stroke={C.green} strokeWidth={2.5} fill="url(#blWeightFill)" dot={{ fill: C.green, r: 3.5, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                                </AreaChart>
                               </ResponsiveContainer>
                             </div>
                           ) : (
@@ -2254,6 +2484,17 @@ export default function BurnLabApp() {
                       foot={weights.filter(w => new Date(w.date).getTime() > Date.now() - 7 * 864e5).length + "/7"} sub="this week" />
                     <Heat30 label="WORKOUTS" color={A.a} dates={new Set(data.history.map(h => new Date(h.date).toDateString()))}
                       foot={String(workoutsThisWeek)} sub="this week" />
+                  </div>
+
+                  <SectionLabel>MUSCLE HEAT</SectionLabel>
+                  <div className="rounded-3xl p-4 mb-4" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid #ffffff14", boxShadow: SHADOW.hero }}>
+                    <AnatomyBody fem={data.profile && data.profile.sex === "f"} mode="heat" heatMap={heatMap} size={190} />
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                      <span style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>DORMANT</span>
+                      <div className="h-2 rounded-full" style={{ width: 140, background: "linear-gradient(90deg,#3A4050,#FF3B30,#FFE38A)" }} />
+                      <span style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>FIRED UP</span>
+                    </div>
+                    <p className="text-xs text-center mt-2" style={{ color: C.faint }}>Tap a muscle - color blends cold to hot based on recent training load vs your weekly target.</p>
                   </div>
 
                   {data.history.length === 0 ? (
@@ -2897,9 +3138,16 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
   const [form, setForm] = useState({
     name: pf.name || "", age: pf.age || "", heightCm: pf.heightCm || "", weightKg: pf.weightKg || "",
     sex: pf.sex || "x", activity: pf.activity || "mod", gym: pf.gym || "full", goal: pf.goal || "build",
+    focusMuscles: pf.focusMuscles || [],
   });
   const [saved, setSaved] = useState(false);
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
+  const toggleFocus = m => setForm(f => {
+    const has = f.focusMuscles.includes(m);
+    const focusMuscles = has ? f.focusMuscles.filter(x => x !== m) : f.focusMuscles.length >= 2 ? f.focusMuscles : [...f.focusMuscles, m];
+    setSaved(false);
+    return { ...f, focusMuscles };
+  });
   const inputStyle = { background: C.card, border: "1px solid " + C.line, color: C.text, fontSize: 16, fontFamily: F.body };
   const selStyle = { ...inputStyle, width: "100%", borderRadius: 12, padding: "10px 12px" };
 
@@ -2966,6 +3214,20 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
                   <option value="m">Male</option><option value="f">Female</option><option value="x">Prefer not to say</option>
                 </select>
               </div>
+            </div>
+            <label className="block mb-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>FOCUS MUSCLES (UP TO 2)</label>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {Object.keys(MUSCLES).map(m => {
+                const picked = form.focusMuscles.includes(m);
+                const disabled = !picked && form.focusMuscles.length >= 2;
+                return (
+                  <button key={m} type="button" onClick={() => toggleFocus(m)} disabled={disabled}
+                    className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors"
+                    style={{ background: picked ? A.a + "1F" : C.card, border: "1px solid " + (picked ? A.a : C.line), color: disabled ? C.faint : C.text, opacity: disabled ? 0.5 : 1 }}>
+                    {m}
+                  </button>
+                );
+              })}
             </div>
             <GradBtn A={A} onClick={applyProfile} className="w-full py-3 rounded-xl text-sm">{saved ? "Saved - targets recalculated ✓" : "Save & recalculate targets"}</GradBtn>
           </div>

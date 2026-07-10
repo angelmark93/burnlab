@@ -16,6 +16,18 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .bl-fade { animation: blfade 0.25s ease; }
 @keyframes blfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+/* Staggered entrance for card grids/lists - pair with an inline --i custom property.
+   Two variants: bl-stagger fades+slides (opacity 0->1); bl-stagger-slide only moves,
+   for elements that already manage their own steady-state opacity inline. */
+.bl-stagger { opacity: 0; animation: blstagger 0.4s ease calc(var(--i, 0) * 0.05s) both; }
+@keyframes blstagger { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.bl-stagger-slide { animation: blstaggerslide 0.4s ease calc(var(--i, 0) * 0.05s) both; }
+@keyframes blstaggerslide { from { transform: translateY(10px); } to { transform: none; } }
+
+/* Ring completion glow pulse - opacity only, never transform (would fight the SVG rotate() attribute) */
+.bl-ring-pulse { animation: blringpulse 1.6s ease-in-out infinite; }
+@keyframes blringpulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+
 /* Animated gradient text (logo / hero) */
 .bl-shimmer {
   background-size: 300% 100%;
@@ -44,6 +56,10 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   animation: blslide 18s linear infinite;
 }
 @keyframes blslide { to { background-position: 152px 0; } }
+
+/* Anatomy body diagram: breathing glow for muscles trained hard/recently */
+.bl-pulse { animation: blpulse 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes blpulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
 
 /* Splash screen */
 .bl-splash-in { animation: blin 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
