@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useId } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid,
@@ -41,6 +41,8 @@ const SHADOW = {
   hero: "0 1px 0 0 rgba(255,255,255,0.05) inset, 0 18px 40px -18px rgba(0,0,0,0.65)",
   glow: hex => "0 8px 22px -6px " + hex + "59",
   nav: "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 -10px 30px -12px rgba(0,0,0,0.55)",
+  subtle: "0 2px 4px rgba(0,0,0,0.1)",
+  lifted: "0 8px 16px rgba(0,0,0,0.3)",
 };
 const MUSCLES = {
   Chest: "#FF5C4A", Back: "#4D7CFF", Shoulders: "#F2B928", Biceps: "#9D6BFF",
@@ -48,6 +50,10 @@ const MUSCLES = {
   Calves: "#37A75C", Abs: "#C9CED8",
 };
 const TIER = { bronze: "#C08452", silver: "#C6CBD4", gold: "#F2B928", platinum: "#9BE8F0" };
+const MUSCLE_GROUPS = {
+  "Upper Body": ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Abs"],
+  "Lower Body": ["Quads", "Hamstrings", "Glutes", "Calves"],
+};
 
 /* ================= EXERCISE PICTOGRAMS =================
    Minimal stick-figure line art, 120x120 viewBox.
@@ -176,30 +182,48 @@ function Picto({ ex, size = 48 }) {
 
 /* ================= ANATOMY BODY DIAGRAM =================
    Simplified vector silhouette (overlapping rounded shapes, not anatomical
-   paths) with soft blurred glow regions per muscle group - used both as the
-   "target muscles" picker in onboarding and the muscle-heat map in Progress. */
+   paths) with flat-shaded, muscle-shaped regions on top - used both as the
+   "target muscles" picker in onboarding and the muscle-heat map in Progress.
+   Each region is a rough corner-point list smoothed into a closed blob via
+   blobPath() (quadratic curves through edge midpoints) rather than hand-
+   tuned bezier paths - quick to author, always renders a clean closed shape. */
+function blobPath(pts) {
+  const n = pts.length;
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const fmt = p => p[0].toFixed(1) + "," + p[1].toFixed(1);
+  let d = "M" + fmt(mid(pts[n - 1], pts[0]));
+  for (let i = 0; i < n; i++) {
+    const cur = pts[i], next = pts[(i + 1) % n];
+    d += " Q" + fmt(cur) + " " + fmt(mid(cur, next));
+  }
+  return d + " Z";
+}
+const mirrorX = pts => pts.map(([x, y]) => [160 - x, y]);
+const SHOULDER_L = [[24, 50], [40, 45], [47, 55], [43, 71], [29, 74], [19, 63]];
+const CHEST_L = [[44, 58], [77, 55], [77, 90], [57, 96], [42, 86], [38, 70]];
+const ABS_PTS = [[65, 96], [95, 96], [93, 148], [80, 156], [67, 148]];
+const BICEP_L = [[21, 68], [37, 64], [40, 94], [34, 114], [21, 107]];
+const QUAD_L = [[51, 175], [75, 173], [77, 226], [69, 254], [55, 252], [50, 218]];
+const BACK_PTS = [[48, 54], [80, 49], [112, 54], [105, 108], [80, 128], [55, 108]];
+const TRICEP_L = [[21, 66], [38, 63], [41, 98], [35, 118], [21, 111]];
+const GLUTES_PTS = [[53, 147], [80, 141], [107, 147], [109, 177], [80, 185], [51, 177]];
+const HAM_L = [[53, 178], [75, 176], [77, 228], [69, 254], [57, 252], [51, 220]];
+const CALF_L = [[57, 261], [71, 259], [73, 298], [67, 323], [59, 321], [55, 295]];
 const MUSCLE_REGIONS = {
   front: [
-    { m: "Shoulders", cx: 38, cy: 58, rx: 14, ry: 13 },
-    { m: "Shoulders", cx: 122, cy: 58, rx: 14, ry: 13 },
-    { m: "Chest", cx: 80, cy: 82, rx: 28, ry: 18 },
-    { m: "Biceps", cx: 29, cy: 95, rx: 10, ry: 24 },
-    { m: "Biceps", cx: 131, cy: 95, rx: 10, ry: 24 },
-    { m: "Abs", cx: 80, cy: 124, rx: 17, ry: 28 },
-    { m: "Quads", cx: 63, cy: 210, rx: 15, ry: 42 },
-    { m: "Quads", cx: 97, cy: 210, rx: 15, ry: 42 },
+    { m: "Shoulders", pts: SHOULDER_L }, { m: "Shoulders", pts: mirrorX(SHOULDER_L) },
+    { m: "Chest", pts: CHEST_L }, { m: "Chest", pts: mirrorX(CHEST_L) },
+    { m: "Biceps", pts: BICEP_L }, { m: "Biceps", pts: mirrorX(BICEP_L) },
+    { m: "Abs", pts: ABS_PTS },
+    { m: "Quads", pts: QUAD_L }, { m: "Quads", pts: mirrorX(QUAD_L) },
   ],
   back: [
-    { m: "Shoulders", cx: 38, cy: 58, rx: 14, ry: 13 },
-    { m: "Shoulders", cx: 122, cy: 58, rx: 14, ry: 13 },
-    { m: "Back", cx: 80, cy: 100, rx: 34, ry: 42 },
-    { m: "Triceps", cx: 29, cy: 100, rx: 10, ry: 28 },
-    { m: "Triceps", cx: 131, cy: 100, rx: 10, ry: 28 },
-    { m: "Glutes", cx: 80, cy: 160, rx: 27, ry: 20 },
-    { m: "Hamstrings", cx: 63, cy: 215, rx: 14, ry: 35 },
-    { m: "Hamstrings", cx: 97, cy: 215, rx: 14, ry: 35 },
-    { m: "Calves", cx: 65, cy: 300, rx: 11, ry: 35 },
-    { m: "Calves", cx: 95, cy: 300, rx: 11, ry: 35 },
+    { m: "Shoulders", pts: SHOULDER_L }, { m: "Shoulders", pts: mirrorX(SHOULDER_L) },
+    { m: "Back", pts: BACK_PTS },
+    { m: "Triceps", pts: TRICEP_L }, { m: "Triceps", pts: mirrorX(TRICEP_L) },
+    { m: "Glutes", pts: GLUTES_PTS },
+    { m: "Hamstrings", pts: HAM_L }, { m: "Hamstrings", pts: mirrorX(HAM_L) },
+    { m: "Calves", pts: CALF_L }, { m: "Calves", pts: mirrorX(CALF_L) },
   ],
 };
 function BodySilhouette({ fem }) {
@@ -248,9 +272,7 @@ function BodySilhouette({ fem }) {
 function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size = 190 }) {
   const [view, setView] = useState("front");
   const [tap, setTap] = useState(null);
-  const uid = useId();
   const regions = MUSCLE_REGIONS[view];
-  const glowId = "bl-anat-glow-" + uid;
   return (
     <div className="flex flex-col items-center">
       <div className="flex gap-1 mb-3 rounded-full p-1" style={{ background: C.card2, border: "1px solid " + C.line }}>
@@ -262,34 +284,20 @@ function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size
         ))}
       </div>
       <svg width={size} height={Math.round(size * 366 / 160)} viewBox="0 0 160 366" role="img" aria-label={view + " body diagram"}>
-        <defs>
-          <filter id={glowId} x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur stdDeviation="7" />
-          </filter>
-        </defs>
         <BodySilhouette fem={fem} />
-        <g style={{ mixBlendMode: "screen" }} filter={"url(#" + glowId + ")"}>
-          {regions.map((r, i) => {
-            const picked = mode === "pick" && selected.includes(r.m);
-            const color = mode === "pick" ? accent : heatColor((heatMap && heatMap[r.m] && heatMap[r.m].ratio) || 0, MUSCLES[r.m]);
-            const opacity = mode === "pick" ? (picked ? 0.85 : 0) : 0.75;
-            return <ellipse key={r.m + i} cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry} fill={color} opacity={opacity}
-              className={mode === "heat" && heatMap && heatMap[r.m] && heatMap[r.m].ratio > 1.1 ? "bl-pulse" : ""} />;
-          })}
-        </g>
-        <g style={{ mixBlendMode: "screen" }}>
-          {regions.map((r, i) => {
-            const picked = mode === "pick" && selected.includes(r.m);
-            if (mode === "pick" && !picked) return null;
-            const color = mode === "pick" ? accent : heatColor((heatMap && heatMap[r.m] && heatMap[r.m].ratio) || 0, MUSCLES[r.m]);
-            return <ellipse key={"core" + r.m + i} cx={r.cx} cy={r.cy} rx={r.rx * 0.5} ry={r.ry * 0.5} fill={color} opacity={mode === "pick" ? 0.9 : 0.5} />;
-          })}
-        </g>
-        {(mode === "pick" || mode === "heat") && regions.map((r, i) => (
-          <ellipse key={"hit" + r.m + i} cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry} fill="transparent" style={{ cursor: "pointer" }}
-            role="button" aria-label={r.m}
-            onClick={() => (mode === "pick" ? onToggle && onToggle(r.m) : setTap(r.m))} />
-        ))}
+        {regions.map((r, i) => {
+          const picked = mode === "pick" && selected.includes(r.m);
+          const hot = mode === "heat" && heatMap && heatMap[r.m] && heatMap[r.m].ratio > 1.1;
+          const color = mode === "pick" ? accent : heatColor((heatMap && heatMap[r.m] && heatMap[r.m].ratio) || 0, MUSCLES[r.m]);
+          const fillOpacity = mode === "pick" ? (picked ? 0.92 : 0.12) : 0.92;
+          return (
+            <path key={r.m + i} d={blobPath(r.pts)} fill={color} fillOpacity={fillOpacity}
+              stroke={mode === "pick" && !picked ? "none" : "#00000055"} strokeWidth="1" strokeLinejoin="round"
+              className={hot ? "bl-pulse" : ""} style={{ cursor: "pointer", filter: hot ? "drop-shadow(0 0 6px " + color + "aa)" : "none" }}
+              role="button" aria-label={r.m}
+              onClick={() => (mode === "pick" ? onToggle && onToggle(r.m) : setTap(r.m))} />
+          );
+        })}
       </svg>
       {mode === "heat" && tap && heatMap && heatMap[tap] && (
         <div className="mt-2 text-center bl-fade">
@@ -898,6 +906,23 @@ function Ring({ pct, color, label, value, size = 64, sub }) {
     </div>
   );
 }
+function MuscleBar({ label, color, value, target, focus }) {
+  const pct = Math.min(1, target ? value / target : 0);
+  return (
+    <div className="py-2">
+      <div className="flex items-center justify-between mb-1">
+        <span className="flex items-center gap-1.5 text-sm font-semibold">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+          {label}{focus && <span aria-label="Focus muscle">🎯</span>}
+        </span>
+        <span style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{value}<span style={{ color: C.faint }}>/{target}</span></span>
+      </div>
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+        <div className="h-full rounded-full transition-all" style={{ width: (pct * 100) + "%", background: color, boxShadow: pct > 0 ? "0 0 8px " + color + "99" : "none" }} />
+      </div>
+    </div>
+  );
+}
 function PlateBar({ weight }) {
   const bd = plateBreakdown(weight);
   if (!bd) return null;
@@ -1289,7 +1314,6 @@ export default function BurnLabApp() {
   const scanCtl = useRef(null);
   const [weighVal, setWeighVal] = useState("");
   const [weightRange, setWeightRange] = useState("1M");
-  const [recMode, setRecMode] = useState("rm");
   const [summary, setSummary] = useState(null);
   const [trophyToast, setTrophyToast] = useState(null);
   const [swapFor, setSwapFor] = useState(null);       // item index
@@ -1298,6 +1322,7 @@ export default function BurnLabApp() {
   const [query, setQuery] = useState("");
   const [libFilter, setLibFilter] = useState("All");
   const [trophyCat, setTrophyCat] = useState("All");
+  const [showAllMuscles, setShowAllMuscles] = useState(false);
   const [chartEx, setChartEx] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const tick = useRef(null);
@@ -1827,9 +1852,11 @@ export default function BurnLabApp() {
               <div style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 19, letterSpacing: 2, lineHeight: 1 }}>
                 BURN<span className="bl-shimmer" style={{ backgroundImage: SHIMMER }}>LAB</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button onClick={() => setOverlay("library")} aria-label="Exercise library" className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }}><BookOpen size={17} color={C.dim} /></button>
-                <button onClick={() => setOverlay("settings")} aria-label="Settings" className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }}><Settings size={17} color={C.dim} /></button>
+                <button onClick={() => setOverlay("settings")} aria-label="Your profile" className="rounded-full flex items-center justify-center" style={{ width: 34, height: 34, background: AG, fontFamily: F.disp, fontWeight: 800, fontSize: 14, color: "#0D0E11" }}>
+                  {(firstName || "A").slice(0, 1).toUpperCase()}
+                </button>
               </div>
             </header>
             <div className="pointer-events-none" style={{ height: 16, marginTop: -16, background: "linear-gradient(180deg," + C.bg + "B3, transparent)" }} aria-hidden="true" />
@@ -1839,13 +1866,10 @@ export default function BurnLabApp() {
               {/* ================= HOME ================= */}
               {tab === "home" && (
                 <div className="bl-fade">
-                  {/* greeting row */}
-                  <div className="flex items-end justify-between mb-3">
-                    <div>
-                      <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim, letterSpacing: 2.5 }}>GOOD {greet}</div>
-                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 32, lineHeight: 1.05, textTransform: "uppercase" }}>{firstName || "Athlete"}</div>
-                    </div>
-                    <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1 }}>{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
+                  {/* greeting row - slim, single line */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span style={{ fontFamily: F.mono, fontSize: 10.5, color: C.dim, letterSpacing: 1 }}>GOOD {greet}, {(firstName || "ATHLETE").toUpperCase()}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1 }}>{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</span>
                   </div>
 
                   {/* weekly burn hero */}
@@ -1857,9 +1881,13 @@ export default function BurnLabApp() {
                     const weekSets = data.history.filter(h => new Date(h.date).getTime() > Date.now() - 7 * 864e5)
                       .reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.length, 0), 0);
                     const SEGS = 22;
+                    const heroStats = [
+                      { label: "SETS", val: weekSets },
+                      { label: "KG LIFTED", val: fmtNum(Math.round(weekTonnage)) },
+                      ...(data.profile && data.profile.targets ? [{ label: "KCAL LEFT", val: fmtNum(Math.max(0, data.profile.targets.goal - eatenToday)) }] : []),
+                    ];
                     return (
                       <div className="relative overflow-hidden rounded-3xl p-5 mb-4" style={{ background: "radial-gradient(120% 150% at 85% -20%," + A.a + "40, transparent 55%), radial-gradient(90% 120% at -10% 115%," + A.b + "2E, transparent 50%), linear-gradient(150deg,#1B1E24,#101216)", border: "1px solid " + A.a + "3A", borderTop: "1px solid " + A.a + "55", boxShadow: SHADOW.hero }}>
-                        <div className="bl-stripes absolute inset-0" aria-hidden="true" />
                         <div className="bl-orb" style={{ width: 130, height: 130, background: A.a, top: -46, right: -24 }} aria-hidden="true" />
                         <div className="relative">
                           <div className="flex items-center justify-between">
@@ -1875,12 +1903,13 @@ export default function BurnLabApp() {
                               <span key={i} className="flex-1 rounded-sm" style={{ height: 14, background: i < Math.round((pct / 100) * SEGS) ? AG : "#ffffff14" }} />
                             ))}
                           </div>
-                          <div className="flex gap-4 mt-3 flex-wrap">
-                            <span style={{ fontFamily: F.mono, fontSize: 10.5, color: C.dim }}><b style={{ color: C.text }}>{weekSets}</b> SETS</span>
-                            <span style={{ fontFamily: F.mono, fontSize: 10.5, color: C.dim }}><b style={{ color: C.text }}>{fmtNum(Math.round(weekTonnage))}</b> KG LIFTED</span>
-                            {data.profile && data.profile.targets && (
-                              <span style={{ fontFamily: F.mono, fontSize: 10.5, color: C.dim }}><b style={{ color: C.text }}>{fmtNum(Math.max(0, data.profile.targets.goal - eatenToday))}</b> KCAL LEFT</span>
-                            )}
+                          <div className="grid mt-4 pt-3" style={{ gridTemplateColumns: "repeat(" + heroStats.length + ",1fr)", borderTop: "1px solid #ffffff17" }}>
+                            {heroStats.map((s, i) => (
+                              <div key={s.label} className="text-center" style={{ borderLeft: i > 0 ? "1px solid #ffffff17" : "none" }}>
+                                <div style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 700, color: C.text }}>{s.val}</div>
+                                <div style={{ fontFamily: F.mono, fontSize: 8, color: C.faint, letterSpacing: 1 }}>{s.label}</div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -1933,29 +1962,22 @@ export default function BurnLabApp() {
                     </button>
                   )}
 
-                  {/* next session */}
+                  {/* next session - the app's one clear action, sized and lit up to feel like it */}
                   {program ? (
-                    <div className="relative overflow-hidden rounded-3xl p-5 mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
-                      <div className="bl-orb bl-orb2" style={{ width: 90, height: 90, background: A.b, bottom: -40, right: -20, opacity: 0.25 }} aria-hidden="true" />
-                      <div className="relative flex items-end justify-between gap-3">
-                        <div className="min-w-0">
-                          <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>UP NEXT</div>
-                          <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 36, lineHeight: 1.05, textTransform: "uppercase" }}>{program.days[nextDayIdx].name}</div>
-                          <div className="text-sm mt-1" style={{ color: C.dim }}>{program.days[nextDayIdx].items.length} exercises · {program.days[nextDayIdx].items.reduce((a, i) => a + i.sets, 0)} working sets</div>
-                          {session ? (
-                            <button onClick={() => setTab("train")} className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm" style={{ background: C.card2, border: "1px solid " + A.a, color: A.a }}>
-                              <Play size={15} /> Resume in progress
-                            </button>
-                          ) : (
-                            <GradBtn A={A} onClick={() => startSession(data.program, program.days[nextDayIdx])} className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm">
-                              <Play size={16} fill="#0D0E11" /> Start workout
-                            </GradBtn>
-                          )}
-                        </div>
-                        {!session && (
-                          <button onClick={() => startSession(data.program, program.days[nextDayIdx])} aria-label="Start workout" className="shrink-0 rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ width: 52, height: 52, background: AG }}>
-                            <ArrowUpRight size={24} color="#0D0E11" strokeWidth={2.6} />
+                    <div className="relative overflow-hidden rounded-3xl p-6 mb-4" style={{ background: C.card2, border: "1px solid " + C.line, boxShadow: SHADOW.lifted }}>
+                      <div className="bl-orb bl-orb2" style={{ width: 100, height: 100, background: A.b, bottom: -40, right: -20, opacity: 0.25 }} aria-hidden="true" />
+                      <div className="relative">
+                        <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>UP NEXT</div>
+                        <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 41, lineHeight: 1.05, textTransform: "uppercase" }}>{program.days[nextDayIdx].name}</div>
+                        <div className="text-sm mt-1" style={{ color: C.dim }}>{program.days[nextDayIdx].items.length} exercises · {program.days[nextDayIdx].items.reduce((a, i) => a + i.sets, 0)} working sets</div>
+                        {session ? (
+                          <button onClick={() => setTab("train")} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm" style={{ background: C.card, border: "1px solid " + A.a, color: A.a }}>
+                            <Play size={15} /> Resume in progress
                           </button>
+                        ) : (
+                          <GradBtn A={A} onClick={() => startSession(data.program, program.days[nextDayIdx])} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-base" style={{ boxShadow: "0 10px 32px -6px " + A.a + "88" }}>
+                            <Play size={18} fill="#0D0E11" /> Start Workout
+                          </GradBtn>
                         )}
                       </div>
                     </div>
@@ -1967,38 +1989,20 @@ export default function BurnLabApp() {
                     </div>
                   )}
 
-                  {/* recent records */}
-                  {recentRecords.length > 0 && (
-                    <div className="rounded-3xl p-4 mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>RECENT RECORDS</span>
-                        <div className="flex rounded-full p-0.5" style={{ background: C.card2, border: "1px solid " + C.line }}>
-                          {[["vol", "Volume"], ["reps", "Reps"], ["rm", "1-RM"]].map(([k, l]) => (
-                            <button key={k} onClick={() => setRecMode(k)} className="px-3 py-1 rounded-full text-xs font-bold transition-colors"
-                              style={{ background: recMode === k ? C.text : "transparent", color: recMode === k ? C.bg : C.dim }}>{l}</button>
-                          ))}
+                  {/* recent records - quick look only; full breakdown lives in Progress */}
+                  {recentRecords.length > 0 && (() => {
+                    const top = [...recentRecords].sort((a, b) => b.rm - a.rm)[0];
+                    return (
+                      <button onClick={() => setTab("progress")} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 mb-4 text-left transition-transform active:scale-[0.98]" style={{ background: C.card, border: "1px solid " + C.line }}>
+                        <Award size={16} color={C.yellow} className="shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5 }}>RECENT RECORD</span>
+                          <div className="text-sm truncate"><b>{EX[top.id] ? EX[top.id].name : top.id}</b> <span style={{ color: C.dim }}>· {Math.round(top.rm)} kg e1RM</span></div>
                         </div>
-                      </div>
-                      {(() => {
-                        const vals = recentRecords.map(r => r[recMode]);
-                        const max = Math.max(...vals, 1);
-                        return recentRecords.map(r => {
-                          const v = r[recMode];
-                          const txt = recMode === "reps" ? v + " reps" : fmtNum(Math.round(v)) + " kg";
-                          return (
-                            <div key={r.id} className="flex items-center gap-2 py-1.5">
-                              <span className="text-xs truncate" style={{ width: 108, color: C.dim }}>{EX[r.id] ? EX[r.id].name : r.id}</span>
-                              <div className="flex-1 flex items-center gap-2">
-                                <div className="rounded-sm" style={{ height: 14, width: Math.max(4, (v / max) * 100) + "%", background: C.yellow, transition: "width 0.35s ease" }} />
-                                <span className="shrink-0" style={{ fontFamily: F.mono, fontSize: 11 }}>{txt}</span>
-                              </div>
-                            </div>
-                          );
-                        });
-                      })()}
-                      <p className="text-xs mt-1.5" style={{ color: C.faint }}>From your most recent sessions - volume is total kg moved, 1-RM is estimated.</p>
-                    </div>
-                  )}
+                        <ChevronLeft size={14} color={C.faint} style={{ transform: "rotate(180deg)" }} className="shrink-0" />
+                      </button>
+                    );
+                  })()}
 
                   {/* weekly targets trio */}
                   <SectionLabel>THIS WEEK VS TARGET</SectionLabel>
@@ -2023,13 +2027,37 @@ export default function BurnLabApp() {
                     ))}
                   </div>
 
-                  {/* weekly volume rings */}
-                  <SectionLabel>WEEKLY SETS PER MUSCLE · TARGET {data.settings.weeklyTarget}{focusMuscles.length ? " (+4 FOCUS)" : ""}</SectionLabel>
-                  <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-y-3 justify-between" style={{ background: C.card, border: "1px solid " + C.line }}>
-                    {Object.keys(MUSCLES).slice(0, 8).map(m => (
-                      <Ring key={m} label={m} color={MUSCLES[m]} value={Math.round(week[m] || 0)} pct={(week[m] || 0) / muscleTarget(m)} sub={focusMuscles.includes(m) ? "🎯" : undefined} />
-                    ))}
-                  </div>
+                  {/* muscle grid: top-3 "in focus" by default, full Upper/Lower grouping on Show All */}
+                  {(() => {
+                    const rows = Object.keys(MUSCLES).map(m => ({
+                      m, value: Math.round(week[m] || 0), target: muscleTarget(m),
+                      pct: (week[m] || 0) / muscleTarget(m), focus: focusMuscles.includes(m),
+                    }));
+                    const top3 = [...rows].sort((a, b) => b.pct - a.pct).slice(0, 3);
+                    return (
+                      <>
+                        <SectionLabel>{showAllMuscles ? "MUSCLES THIS WEEK" : "TOP 3 IN FOCUS"}</SectionLabel>
+                        <div className="rounded-2xl px-4 py-1 mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
+                          {!showAllMuscles ? (
+                            top3.map(r => <MuscleBar key={r.m} label={r.m} color={MUSCLES[r.m]} value={r.value} target={r.target} focus={r.focus} />)
+                          ) : (
+                            Object.entries(MUSCLE_GROUPS).map(([group, muscles]) => (
+                              <div key={group}>
+                                <div className="pt-3 pb-1" style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5 }}>{group.toUpperCase()}</div>
+                                {muscles.map(m => {
+                                  const r = rows.find(x => x.m === m);
+                                  return <MuscleBar key={m} label={m} color={MUSCLES[m]} value={r.value} target={r.target} focus={r.focus} />;
+                                })}
+                              </div>
+                            ))
+                          )}
+                          <button onClick={() => setShowAllMuscles(v => !v)} className="w-full text-center py-2.5 text-xs font-bold mt-1" style={{ color: A.a, borderTop: "1px solid " + C.line }}>
+                            {showAllMuscles ? "Show less" : "Show all " + Object.keys(MUSCLES).length}
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   {/* lab note */}
                   <div className="rounded-2xl p-4 mb-2 flex gap-3" style={{ background: A.a + "12", border: "1px solid " + A.a + "3D" }}>
@@ -3102,7 +3130,7 @@ export default function BurnLabApp() {
                   return (
                     <button key={t.id} onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab(t.id); setOverlay(null); }} aria-label={t.label} aria-current={active ? "page" : undefined}
                       className="flex flex-col items-center justify-center rounded-full transition-all active:scale-90"
-                      style={{ width: 46, height: 46, background: active ? AG : "transparent", boxShadow: active ? SHADOW.glow(A.a) : "none" }}>
+                      style={{ width: 46, height: 46, background: active ? AG : "transparent", boxShadow: active ? SHADOW.glow(A.a) : "none", opacity: active ? 1 : 0.5 }}>
                       <Icon size={20} color={active ? "#0D0E11" : C.faint} strokeWidth={active ? 2.5 : 2} />
                       {!active && <span style={{ fontFamily: F.mono, fontSize: 7, letterSpacing: 0.5, color: C.faint, marginTop: 1 }}>{t.label.toUpperCase()}</span>}
                     </button>
