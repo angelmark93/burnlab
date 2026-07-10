@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+html, body, #root { min-height: 100%; }
+body { margin: 0; background: #08090B; }
+
+/* Prevent iOS zoom-on-focus: keep all form controls at 16px+ */
+input, select, textarea { font-size: 16px; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+*:focus-visible { outline: 2px solid #FF4D2E; outline-offset: 1px; border-radius: 4px; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Entry animation for views */
+.bl-fade { animation: blfade 0.25s ease; }
+@keyframes blfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Animated gradient text (logo / hero) */
+.bl-shimmer {
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: blshift 7s linear infinite;
+}
+@keyframes blshift { to { background-position: -300% 0; } }
+
+/* Home hero: drifting glow orbs + sliding diagonal stripes */
+.bl-orb { position: absolute; border-radius: 9999px; filter: blur(30px); opacity: 0.45; animation: blfloat 11s ease-in-out infinite alternate; }
+.bl-orb2 { animation-duration: 14s; animation-delay: -4s; }
+@keyframes blfloat { from { transform: translate(0, 0) scale(1); } to { transform: translate(28px, -16px) scale(1.18); } }
+.bl-stripes {
+  background: repeating-linear-gradient(-45deg, rgba(255,255,255,0.045) 0 8px, transparent 8px 22px);
+  animation: blslide 18s linear infinite;
+}
+@keyframes blslide { to { background-position: 152px 0; } }
+
+/* Splash screen */
+.bl-splash-in { animation: blin 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+@keyframes blin { from { transform: scale(0.72); opacity: 0; letter-spacing: 14px; } to { transform: scale(1); opacity: 1; } }
+.bl-splash-sub { animation: blsub 0.9s ease 0.35s both; }
+@keyframes blsub { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.bl-gone { opacity: 0; transition: opacity 0.45s ease; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+  .bl-shimmer { color: #F2F0EA; background: none; }
+}
