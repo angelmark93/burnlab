@@ -29,7 +29,16 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 /* Home hero: drifting glow orbs + sliding diagonal stripes */
 .bl-orb { position: absolute; border-radius: 9999px; filter: blur(30px); opacity: 0.45; animation: blfloat 11s ease-in-out infinite alternate; }
 .bl-orb2 { animation-duration: 14s; animation-delay: -4s; }
+.bl-orb3 { animation-duration: 18s; animation-delay: -9s; animation-name: blfloat2; }
 @keyframes blfloat { from { transform: translate(0, 0) scale(1); } to { transform: translate(28px, -16px) scale(1.18); } }
+@keyframes blfloat2 { from { transform: translate(0, 0) scale(1); } to { transform: translate(-22px, 24px) scale(1.12); } }
+
+/* App-wide living background: slow drifting accent-tinted glows behind everything.
+   Absolute (not fixed) so it's clipped to the phone-frame column, not the full viewport. */
+.bl-livebg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }
+.bl-livebg .bl-orb { animation-duration: 26s; }
+.bl-livebg .bl-orb2 { animation-duration: 32s; }
+.bl-livebg .bl-orb3 { animation-duration: 38s; }
 .bl-stripes {
   background: repeating-linear-gradient(-45deg, rgba(255,255,255,0.045) 0 8px, transparent 8px 22px);
   animation: blslide 18s linear infinite;

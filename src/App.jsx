@@ -35,6 +35,13 @@ const ACCENTS = {
   volt:   { name: "Volt",   a: "#A8E82F", b: "#4DDB6A" },
   violet: { name: "Violet", a: "#8B5CFF", b: "#D66BFF" },
 };
+/* soft elevation + accent-glow helpers, layered onto the flat card borders for a sleeker glass feel */
+const SHADOW = {
+  card: "0 1px 0 0 rgba(255,255,255,0.035) inset, 0 10px 28px -16px rgba(0,0,0,0.6)",
+  hero: "0 1px 0 0 rgba(255,255,255,0.05) inset, 0 18px 40px -18px rgba(0,0,0,0.65)",
+  glow: hex => "0 8px 22px -6px " + hex + "59",
+  nav: "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 -10px 30px -12px rgba(0,0,0,0.55)",
+};
 const MUSCLES = {
   Chest: "#FF5C4A", Back: "#4D7CFF", Shoulders: "#F2B928", Biceps: "#9D6BFF",
   Triceps: "#2FBFAE", Quads: "#FF8A3D", Hamstrings: "#4DA6FF", Glutes: "#FF5C8A",
@@ -464,26 +471,48 @@ const macrosFor = (food, grams) => ({
 });
 
 /* ================= TROPHIES ================= */
+const CATEGORY_LABEL = { training: "Training", nutrition: "Nutrition", weighin: "Weigh-Ins", photo: "Photos" };
 const TROPHIES = [
-  { id: "first", name: "First Burn", desc: "Complete your first session", tier: "bronze", calc: s => [Math.min(s.count, 1), 1] },
-  { id: "w10", name: "Regular", desc: "Complete 10 workouts", tier: "bronze", calc: s => [s.count, 10] },
-  { id: "w25", name: "Committed", desc: "Complete 25 workouts", tier: "silver", calc: s => [s.count, 25] },
-  { id: "w50", name: "The Machine", desc: "Complete 50 workouts", tier: "gold", calc: s => [s.count, 50] },
-  { id: "w100", name: "Century Club", desc: "Complete 100 workouts", tier: "gold", calc: s => [s.count, 100] },
-  { id: "streak4", name: "Habit Formed", desc: "3+ sessions a week, 4 weeks in a row", tier: "gold", calc: s => [s.bestRun, 4] },
-  { id: "t10k", name: "Ten Tonnes", desc: "Lift 10,000 kg of total volume", tier: "bronze", calc: s => [Math.round(s.tonnage), 10000] },
-  { id: "t100k", name: "Hundred Tonnes", desc: "Lift 100,000 kg of total volume", tier: "silver", calc: s => [Math.round(s.tonnage), 100000] },
-  { id: "t1m", name: "The Millionaire", desc: "Lift 1,000,000 kg of total volume", tier: "gold", calc: s => [Math.round(s.tonnage), 1000000] },
-  { id: "pr1", name: "Record Breaker", desc: "Set your first PR", tier: "bronze", calc: s => [s.prs, 1] },
-  { id: "pr10", name: "PR Machine", desc: "Set 10 PRs", tier: "silver", calc: s => [s.prs, 10] },
-  { id: "pr25", name: "Unstoppable", desc: "Set 25 PRs", tier: "gold", calc: s => [s.prs, 25] },
-  { id: "bench100", name: "The Big Bench", desc: "Reach a 100 kg bench press e1RM", tier: "gold", calc: s => [Math.round(s.bench), 100] },
-  { id: "squat140", name: "Squat Royalty", desc: "Reach a 140 kg squat e1RM", tier: "gold", calc: s => [Math.round(s.squat), 140] },
-  { id: "dead180", name: "Diesel", desc: "Reach a 180 kg deadlift e1RM", tier: "gold", calc: s => [Math.round(s.dead), 180] },
-  { id: "dawn", name: "Dawn Patrol", desc: "Train before 7am", tier: "bronze", calc: s => [s.dawn ? 1 : 0, 1] },
-  { id: "night", name: "Night Shift", desc: "Train after 9pm", tier: "bronze", calc: s => [s.night ? 1 : 0, 1] },
-  { id: "full", name: "Full House", desc: "Complete every prescribed set in a session", tier: "bronze", calc: s => [s.full ? 1 : 0, 1] },
-  { id: "plat", name: "Burn Legend", desc: "Unlock every other trophy", tier: "platinum", calc: null },
+  // ---- training ----
+  { id: "first", name: "First Burn", desc: "Complete your first session", tier: "bronze", category: "training", calc: s => [Math.min(s.count, 1), 1] },
+  { id: "w10", name: "Regular", desc: "Complete 10 workouts", tier: "bronze", category: "training", calc: s => [s.count, 10] },
+  { id: "w25", name: "Committed", desc: "Complete 25 workouts", tier: "silver", category: "training", calc: s => [s.count, 25] },
+  { id: "w50", name: "The Machine", desc: "Complete 50 workouts", tier: "gold", category: "training", calc: s => [s.count, 50] },
+  { id: "w100", name: "Century Club", desc: "Complete 100 workouts", tier: "gold", category: "training", calc: s => [s.count, 100] },
+  { id: "streak4", name: "Habit Formed", desc: "3+ sessions a week, 4 weeks in a row", tier: "gold", category: "training", calc: s => [s.bestRun, 4] },
+  { id: "streak8", name: "Iron Habit", desc: "3+ sessions a week, 8 weeks in a row", tier: "gold", category: "training", calc: s => [s.bestRun, 8] },
+  { id: "t10k", name: "Ten Tonnes", desc: "Lift 10,000 kg of total volume", tier: "bronze", category: "training", calc: s => [Math.round(s.tonnage), 10000] },
+  { id: "t100k", name: "Hundred Tonnes", desc: "Lift 100,000 kg of total volume", tier: "silver", category: "training", calc: s => [Math.round(s.tonnage), 100000] },
+  { id: "t1m", name: "The Millionaire", desc: "Lift 1,000,000 kg of total volume", tier: "gold", category: "training", calc: s => [Math.round(s.tonnage), 1000000] },
+  { id: "sets1000", name: "Set Collector", desc: "Log 1,000 total sets", tier: "silver", category: "training", calc: s => [s.sets, 1000] },
+  { id: "pr1", name: "Record Breaker", desc: "Set your first PR", tier: "bronze", category: "training", calc: s => [s.prs, 1] },
+  { id: "pr10", name: "PR Machine", desc: "Set 10 PRs", tier: "silver", category: "training", calc: s => [s.prs, 10] },
+  { id: "pr25", name: "Unstoppable", desc: "Set 25 PRs", tier: "gold", category: "training", calc: s => [s.prs, 25] },
+  { id: "bench100", name: "The Big Bench", desc: "Reach a 100 kg bench press e1RM", tier: "gold", category: "training", calc: s => [Math.round(s.bench), 100] },
+  { id: "squat140", name: "Squat Royalty", desc: "Reach a 140 kg squat e1RM", tier: "gold", category: "training", calc: s => [Math.round(s.squat), 140] },
+  { id: "dead180", name: "Diesel", desc: "Reach a 180 kg deadlift e1RM", tier: "gold", category: "training", calc: s => [Math.round(s.dead), 180] },
+  { id: "dawn", name: "Dawn Patrol", desc: "Train before 7am", tier: "bronze", category: "training", calc: s => [s.dawn ? 1 : 0, 1] },
+  { id: "night", name: "Night Shift", desc: "Train after 9pm", tier: "bronze", category: "training", calc: s => [s.night ? 1 : 0, 1] },
+  { id: "full", name: "Full House", desc: "Complete every prescribed set in a session", tier: "bronze", category: "training", calc: s => [s.full ? 1 : 0, 1] },
+  // ---- nutrition ----
+  { id: "food1", name: "First Fuel", desc: "Log your first food entry", tier: "bronze", category: "nutrition", calc: s => [Math.min(s.foodEntries, 1), 1] },
+  { id: "food7", name: "Week of Fuel", desc: "Log food on 7 different days", tier: "bronze", category: "nutrition", calc: s => [s.foodDays, 7] },
+  { id: "food30", name: "Diary Keeper", desc: "Log food on 30 different days", tier: "silver", category: "nutrition", calc: s => [s.foodDays, 30] },
+  { id: "protein25", name: "On Target", desc: "Hit your protein target on 25 days", tier: "gold", category: "nutrition", calc: s => [s.proteinHitDays, 25] },
+  { id: "food250", name: "Macro Master", desc: "Log 250 food entries", tier: "gold", category: "nutrition", calc: s => [s.foodEntries, 250] },
+  // ---- weigh-ins ----
+  { id: "weigh1", name: "On The Scale", desc: "Log your first weigh-in", tier: "bronze", category: "weighin", calc: s => [Math.min(s.weighCount, 1), 1] },
+  { id: "weighstreak7", name: "Steady Hand", desc: "Log a 7-day weigh-in streak", tier: "bronze", category: "weighin", calc: s => [s.bestWeighStreak, 7] },
+  { id: "weighstreak30", name: "Consistency", desc: "Log a 30-day weigh-in streak", tier: "silver", category: "weighin", calc: s => [s.bestWeighStreak, 30] },
+  { id: "weigh100", name: "The Long Haul", desc: "Log 100 weigh-ins", tier: "gold", category: "weighin", calc: s => [s.weighCount, 100] },
+  { id: "weigh200", name: "Dedication", desc: "Log 200 weigh-ins", tier: "gold", category: "weighin", calc: s => [s.weighCount, 200] },
+  // ---- photos ----
+  { id: "photo1", name: "Say Cheese", desc: "Add your first progress photo", tier: "bronze", category: "photo", calc: s => [Math.min(s.photoCount, 1), 1] },
+  { id: "photo2", name: "Then & Now", desc: "Add 2 progress photos", tier: "bronze", category: "photo", calc: s => [s.photoCount, 2] },
+  { id: "photo10", name: "Visual Proof", desc: "Add 10 progress photos", tier: "silver", category: "photo", calc: s => [s.photoCount, 10] },
+  { id: "photo25", name: "Time Capsule", desc: "Add 25 progress photos", tier: "gold", category: "photo", calc: s => [s.photoCount, 25] },
+  // ---- meta ----
+  { id: "plat", name: "Burn Legend", desc: "Unlock every other trophy", tier: "platinum", category: "training", calc: null },
 ];
 
 /* ================= HELPERS ================= */
@@ -561,8 +590,17 @@ function resolveEx(id, subs, gym) {
 }
 
 /* ---- trophies ---- */
+function bestConsecutiveDayStreak(dates) {
+  const days = [...new Set(dates.map(d => Math.floor(new Date(d).setHours(0, 0, 0, 0) / 864e5)))].sort((a, b) => a - b);
+  let run = 0, best = 0;
+  for (let i = 0; i < days.length; i++) {
+    run = (i > 0 && days[i] - days[i - 1] === 1) ? run + 1 : 1;
+    best = Math.max(best, run);
+  }
+  return best;
+}
 function trophyStats(history) {
-  let tonnage = 0, prs = 0, dawn = false, night = false, full = false;
+  let tonnage = 0, prs = 0, dawn = false, night = false, full = false, sets = 0;
   const best = {};
   for (const w of history) {
     const h = new Date(w.date).getHours();
@@ -570,10 +608,13 @@ function trophyStats(history) {
     if (h >= 21) night = true;
     if (w.full) full = true;
     const wBest = {};
-    for (const e of w.exercises) for (const s of e.sets) {
-      tonnage += s.w * s.r;
-      const v = e1rm(s.w, s.r);
-      if (!wBest[e.id] || v > wBest[e.id]) wBest[e.id] = v;
+    for (const e of w.exercises) {
+      sets += e.sets.length;
+      for (const s of e.sets) {
+        tonnage += s.w * s.r;
+        const v = e1rm(s.w, s.r);
+        if (!wBest[e.id] || v > wBest[e.id]) wBest[e.id] = v;
+      }
     }
     for (const id in wBest) {
       if (best[id] !== undefined && wBest[id] > best[id]) prs++;
@@ -594,10 +635,32 @@ function trophyStats(history) {
       bestRun = Math.max(bestRun, run);
     }
   }
-  return { count: history.length, tonnage, prs, dawn, night, full, bestRun, bench: best["bench"] || 0, squat: best["squat"] || 0, dead: best["deadlift"] || 0 };
+  return { count: history.length, tonnage, prs, dawn, night, full, sets, bestRun, bench: best["bench"] || 0, squat: best["squat"] || 0, dead: best["deadlift"] || 0 };
 }
-function achievements(history) {
-  const st = trophyStats(history);
+function fullStats(data, photos) {
+  const st = trophyStats(data.history || []);
+  const foodLog = data.foodLog || [];
+  const weights = data.weights || [];
+  const foodDaySet = new Set(foodLog.map(e => e.d));
+  let proteinHitDays = 0;
+  const proteinTarget = data.profile && data.profile.targets ? data.profile.targets.proteinG : null;
+  if (proteinTarget) {
+    const perDay = {};
+    for (const e of foodLog) perDay[e.d] = (perDay[e.d] || 0) + e.p;
+    proteinHitDays = Object.values(perDay).filter(p => p >= proteinTarget).length;
+  }
+  return {
+    ...st,
+    foodEntries: foodLog.length,
+    foodDays: foodDaySet.size,
+    proteinHitDays,
+    weighCount: weights.length,
+    bestWeighStreak: bestConsecutiveDayStreak(weights.map(w => w.date)),
+    photoCount: (photos || []).length,
+  };
+}
+function achievements(data, photos) {
+  const st = fullStats(data, photos);
   const list = TROPHIES.map(t => {
     if (!t.calc) return { ...t, v: 0, tg: 1, done: false };
     const [v, tg] = t.calc(st);
@@ -649,7 +712,7 @@ function Ring({ pct, color, label, value, size = 64, sub }) {
     <div className="flex flex-col items-center gap-1" style={{ width: size + 8 }}>
       <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} role="img" aria-label={label + ": " + value}>
         <circle cx={h} cy={h} r={r} fill="none" stroke={C.line} strokeWidth="6" />
-        <circle cx={h} cy={h} r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
+        <circle cx={h} cy={h} r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 5px " + color + "88)" }}
           strokeDasharray={filled + " " + (circ - filled)} transform={"rotate(-90 " + h + " " + h + ")"} />
         <text x={h} y={sub ? h + 1 : h + 5} textAnchor="middle" fill={C.text} style={{ fontFamily: F.disp, fontSize: size * 0.28, fontWeight: 700 }}>{value}</text>
         {sub && <text x={h} y={h + size * 0.2} textAnchor="middle" fill={C.dim} style={{ fontFamily: F.mono, fontSize: size * 0.11 }}>{sub}</text>}
@@ -683,16 +746,16 @@ function PlateBar({ weight }) {
 }
 function Toggle({ on, onChange, label }) {
   return (
-    <button onClick={() => onChange(!on)} role="switch" aria-checked={on} aria-label={label}
-      className="relative rounded-full transition-colors shrink-0"
-      style={{ width: 46, height: 26, background: on ? C.green : C.card2, border: "1px solid " + (on ? C.green : C.line) }}>
-      <span className="absolute rounded-full transition-transform" style={{ top: 2, left: 2, width: 20, height: 20, background: "#fff", transform: on ? "translateX(20px)" : "translateX(0)" }} />
+    <button onClick={() => { if (vibrateEnabled) haptic("tap"); onChange(!on); }} role="switch" aria-checked={on} aria-label={label}
+      className="relative rounded-full transition-all active:scale-95 shrink-0"
+      style={{ width: 46, height: 26, background: on ? C.green : C.card2, border: "1px solid " + (on ? C.green : C.line), boxShadow: on ? SHADOW.glow(C.green) : "none" }}>
+      <span className="absolute rounded-full transition-transform" style={{ top: 2, left: 2, width: 20, height: 20, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.4)", transform: on ? "translateX(20px)" : "translateX(0)" }} />
     </button>
   );
 }
 const GradBtn = ({ A, onClick, children, className = "", style = {} }) => (
-  <button onClick={onClick} className={"font-bold transition-transform active:scale-95 " + className}
-    style={{ background: "linear-gradient(90deg," + A.a + "," + A.b + ")", color: "#0D0E11", ...style }}>{children}</button>
+  <button onClick={e => { if (vibrateEnabled) haptic("light"); if (onClick) onClick(e); }} className={"font-bold transition-all active:scale-95 active:brightness-90 " + className}
+    style={{ background: "linear-gradient(90deg," + A.a + "," + A.b + ")", color: "#0D0E11", boxShadow: SHADOW.glow(A.a), ...style }}>{children}</button>
 );
 
 /* ================= ONBOARDING ================= */
@@ -803,7 +866,7 @@ function Onboarding({ A, onDone }) {
 
         {step === 6 && (<div className="bl-fade">
           <H kicker="YOUR NUMBERS" title={"Locked in, " + (p.name.trim() || "Athlete")} sub="Calculated with the Mifflin-St Jeor equation from what you told us. Fine-tune any of this later in Settings." />
-          <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
+          <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid " + A.a + "44", boxShadow: SHADOW.card }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>DAILY TARGET - {(GOAL_LABEL[p.goal] || "").toUpperCase()}</div>
             <div className="bl-shimmer" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 44, backgroundImage: "linear-gradient(90deg," + A.a + "," + A.b + ",#F2F0EA," + A.a + ")" }}>{fmtNum(targets.goal)}</div>
             <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day &nbsp;·&nbsp; maintenance {fmtNum(targets.maintain)} kcal</div>
@@ -879,7 +942,22 @@ function playDing() {
     });
   } catch (e) {}
 }
-function buzz() { try { if (navigator.vibrate) navigator.vibrate([180, 90, 180]); } catch (e) {} }
+/* ---- graded haptics ----
+   vibrateEnabled is a module-level flag (mirrors the _actx pattern above) so
+   shared components like GradBtn/Toggle can fire tactile feedback without
+   needing data.settings threaded through props. */
+let vibrateEnabled = true;
+const HAPTIC = {
+  tap: [8],
+  light: [10],
+  medium: [16, 30, 16],
+  success: [14, 40, 14],
+  warning: [30, 60, 30],
+  pr: [16, 50, 16, 50, 30],
+  trophy: [20, 40, 20, 40, 40],
+  timerDone: [180, 90, 180],
+};
+function haptic(kind) { try { if (navigator.vibrate) navigator.vibrate(HAPTIC[kind] || HAPTIC.tap); } catch (e) {} }
 function notifyDone() {
   try {
     if (document.visibilityState === "visible") return;
@@ -953,6 +1031,17 @@ function Heat30({ dates, color, label, foot, sub }) {
   );
 }
 
+/* ---- app-wide living background: slow drifting accent-tinted glows ---- */
+function LivingBackground({ A }) {
+  return (
+    <div className="bl-livebg" aria-hidden="true">
+      <div className="bl-orb" style={{ width: 360, height: 360, background: A.a, top: -140, left: -100, opacity: 0.16, filter: "blur(70px)" }} />
+      <div className="bl-orb bl-orb2" style={{ width: 320, height: 320, background: A.b, top: "34%", right: -160, opacity: 0.13, filter: "blur(72px)" }} />
+      <div className="bl-orb bl-orb3" style={{ width: 280, height: 280, background: A.a, bottom: -120, left: "18%", opacity: 0.10, filter: "blur(64px)" }} />
+    </div>
+  );
+}
+
 export default function BurnLabApp() {
   const [tab, setTab] = useState("home");
   const [overlay, setOverlay] = useState(null);       // 'library' | 'settings'
@@ -994,11 +1083,13 @@ export default function BurnLabApp() {
   const [weightRange, setWeightRange] = useState("1M");
   const [recMode, setRecMode] = useState("rm");
   const [summary, setSummary] = useState(null);
+  const [trophyToast, setTrophyToast] = useState(null);
   const [swapFor, setSwapFor] = useState(null);       // item index
   const [rpeHelp, setRpeHelp] = useState(false);
   const [discardArm, setDiscardArm] = useState(false);
   const [query, setQuery] = useState("");
   const [libFilter, setLibFilter] = useState("All");
+  const [trophyCat, setTrophyCat] = useState("All");
   const [chartEx, setChartEx] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const tick = useRef(null);
@@ -1054,11 +1145,14 @@ export default function BurnLabApp() {
     if (!file) return;
     try {
       const img = await fileToDataUrl(file);
-      await savePhotos([...photos, { id: Date.now(), date: todayISO(), img, weightKg: (data.weights && data.weights.length ? data.weights[data.weights.length - 1].kg : (data.profile && data.profile.weightKg) || null) }]);
+      const nextPhotos = [...photos, { id: Date.now(), date: todayISO(), img, weightKg: (data.weights && data.weights.length ? data.weights[data.weights.length - 1].kg : (data.profile && data.profile.weightKg) || null) }];
+      const beforeIds = troph.filter(t => t.done).map(t => t.id);
+      await savePhotos(nextPhotos);
       setTab("progress");
+      notifyTrophyUnlocks(beforeIds, data, nextPhotos);
     } catch (err) { setPhotoErr("Couldn't read that image — try a different photo."); }
   };
-  const deletePhoto = (id) => { savePhotos(photos.filter(p => p.id !== id)); setPhotoView(null); };
+  const deletePhoto = (id) => { if (data.settings.vibrate) haptic("warning"); savePhotos(photos.filter(p => p.id !== id)); setPhotoView(null); };
   const photoIsDue = photoDue(photos, data.settings.photoCadence);
 
   /* ---------- bodyweight ---------- */
@@ -1077,7 +1171,9 @@ export default function BurnLabApp() {
       if (p.targets) p.targets = calcTargets(p);
       next.profile = p;
     }
+    const beforeIds = troph.filter(t => t.done).map(t => t.id);
     save(next); setWeighOpen(false); setWeighVal("");
+    notifyTrophyUnlocks(beforeIds, next, photos);
   };
 
   /* ---------- food tracker ---------- */
@@ -1095,7 +1191,12 @@ export default function BurnLabApp() {
     return [...seen.values()];
   }, [foodLog]);
   const closeAdd = () => { setAddFor(null); setAddStage("search"); setFoodQuery(""); setPortionFood(null); setPortionG(""); setQuick({ name: "", kcal: "", p: "", c: "", f: "" }); setCustomF({ n: "", k: "", p: "", c: "", f: "", sg: "" }); };
-  const addEntry = (entry) => { save({ ...data, foodLog: [...foodLog, { id: Date.now() + Math.random(), d: fuelDate, ...entry }] }); closeAdd(); };
+  const addEntry = (entry) => {
+    const next = { ...data, foodLog: [...foodLog, { id: Date.now() + Math.random(), d: fuelDate, ...entry }] };
+    const beforeIds = troph.filter(t => t.done).map(t => t.id);
+    save(next); closeAdd();
+    notifyTrophyUnlocks(beforeIds, next, photos);
+  };
 
   /* worldwide food search — Open Food Facts (online only; logged foods become
      available offline via Recents since their per-100g values are stored) */
@@ -1147,7 +1248,7 @@ export default function BurnLabApp() {
     save({ ...data, customFoods: [...customFoods, food] });
     setPortionFood(food); setPortionG(food.sg ? String(food.sg) : "100"); setAddStage("portion");
   };
-  const deleteEntry = (id) => { save({ ...data, foodLog: foodLog.filter(e => e.id !== id) }); setEntryEdit(null); };
+  const deleteEntry = (id) => { if (data.settings.vibrate) haptic("warning"); save({ ...data, foodLog: foodLog.filter(e => e.id !== id) }); setEntryEdit(null); };
   const updateEntry = (id, g) => {
     const grams = parseFloat(g); const e = foodLog.find(x => x.id === id);
     if (!e || !e.per100 || !grams || grams <= 0) return;
@@ -1280,16 +1381,33 @@ export default function BurnLabApp() {
     window.addEventListener("focus", resync);
     return () => { clearInterval(tick.current); document.removeEventListener("visibilitychange", resync); window.removeEventListener("focus", resync); };
   }, [rest !== null]);
+  /* silent keep-alive: an inaudible looping oscillator that keeps the audio
+     context active while resting — reduces background tab timer throttling
+     on Android/Chrome, no extra asset needed. */
+  useEffect(() => {
+    if (rest === null || !_actx) return;
+    try {
+      const gain = _actx.createGain();
+      gain.gain.value = 0.00001;
+      const osc = _actx.createOscillator();
+      osc.frequency.value = 20;
+      osc.connect(gain); gain.connect(_actx.destination);
+      osc.start();
+      return () => { try { osc.stop(); osc.disconnect(); gain.disconnect(); } catch (e) {} };
+    } catch (e) {}
+  }, [rest !== null]);
   useEffect(() => {
     if (rest === null) { restFired.current = false; return; }
     if (restLeft === 0 && !restFired.current) {
       restFired.current = true;
       if (data.settings.sound) playDing();
-      if (data.settings.vibrate) buzz();
+      if (data.settings.vibrate) haptic("timerDone");
       notifyDone();
     }
     if (restLeft > 0) restFired.current = false;
   }, [restLeft, rest === null]);
+
+  useEffect(() => { vibrateEnabled = !!data.settings.vibrate; }, [data.settings.vibrate]);
 
   const A = ACCENTS[data.settings.accent] || ACCENTS.ember;
   const AG = "linear-gradient(90deg," + A.a + "," + A.b + ")";
@@ -1323,7 +1441,11 @@ export default function BurnLabApp() {
   const week = useMemo(() => weeklySets(data.history), [data.history]);
   const workoutsThisWeek = data.history.filter(h => new Date(h.date).getTime() > Date.now() - 7 * 864e5).length;
   const scienceTip = SCIENCE[new Date().getDate() % SCIENCE.length];
-  const troph = useMemo(() => achievements(data.history), [data.history]);
+  const troph = useMemo(() => achievements(data, photos), [data, photos]);
+  const notifyTrophyUnlocks = (beforeIds, nextData, nextPhotos) => {
+    const unlocked = achievements(nextData, nextPhotos).filter(t => t.done && !beforeIds.includes(t.id));
+    if (unlocked.length) { setTrophyToast(unlocked); if (data.settings.vibrate) haptic("trophy"); }
+  };
   const hour = new Date().getHours();
   const greet = hour < 12 ? "MORNING" : hour < 18 ? "AFTERNOON" : "EVENING";
   const firstName = data.profile && data.profile.name ? data.profile.name.split(" ")[0] : "";
@@ -1347,15 +1469,21 @@ export default function BurnLabApp() {
     ...s, entries: s.entries.map((arr, j) => j === idx ? arr.map((st, k) => k === i ? { ...st, [field]: val } : st) : arr),
   }));
 
+  /* ---------- rest-timer / service-worker handoff ---------- */
+  const postToSW = (msg) => { try { navigator.serviceWorker && navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage(msg); } catch (e) {} };
+  const scheduleRest = (end, total) => { setRest({ end, total }); postToSW({ type: "rest-schedule", end, total }); };
+  const clearRest = () => { setRest(null); postToSW({ type: "rest-cancel" }); };
+
   const toggleDone = (idx, i, restSec) => {
     const st = session.entries[idx][i];
     const done = !st.done;
     if (done && (!st.w || !st.r)) return;
     unlockAudio(); // user gesture: primes the audio context so the finish chime can play
+    if (done && data.settings.vibrate) haptic("tap");
     if (done && data.settings.autoRest) {
       const secs = data.settings.restOverride || restSec;
       restFired.current = false;
-      setRest({ end: Date.now() + secs * 1000, total: secs });
+      scheduleRest(Date.now() + secs * 1000, secs);
       setNow(Date.now());
     }
     setSession({ ...session, entries: session.entries.map((arr, j) => j === idx ? arr.map((x, k) => k === i ? { ...x, done } : x) : arr) });
@@ -1383,7 +1511,7 @@ export default function BurnLabApp() {
       id: it.ex,
       sets: session.entries[i].filter(s => s.done).map(s => ({ w: parseFloat(s.w) || 0, r: parseInt(s.r) || 0, rpe: s.rpe })),
     })).filter(e => e.sets.length);
-    if (!exercises.length) { setSession(null); setRest(null); return; }
+    if (!exercises.length) { setSession(null); clearRest(); return; }
     const before = troph.filter(t => t.done).map(t => t.id);
     const prsList = [];
     for (const e of exercises) {
@@ -1397,13 +1525,14 @@ export default function BurnLabApp() {
       durationMin: Math.max(1, Math.round((Date.now() - session.startedAt) / 60000)), full, exercises,
     };
     const newHistory = [...data.history, entry];
-    const after = achievements(newHistory).filter(t => t.done).map(t => t.id);
+    const after = achievements({ ...data, history: newHistory }, photos).filter(t => t.done).map(t => t.id);
     const newTrophies = after.filter(id => !before.includes(id)).map(id => TROPHIES.find(t => t.id === id));
     const tonnage = exercises.reduce((t, e) => t + e.sets.reduce((a, s) => a + s.w * s.r, 0), 0);
     const setCount = exercises.reduce((t, e) => t + e.sets.length, 0);
     save({ ...data, history: newHistory });
+    if (data.settings.vibrate) haptic(prsList.length ? "pr" : newTrophies.length ? "trophy" : "success");
     setSummary({ entry, tonnage, setCount, prs: prsList, trophies: newTrophies });
-    setSession(null); setRest(null);
+    setSession(null); clearRest();
   };
 
   const onOnboardDone = (profile, prog) => {
@@ -1459,7 +1588,8 @@ export default function BurnLabApp() {
   /* ================= RENDER ================= */
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ background: "#08090B", fontFamily: F.body, color: C.text }}>
-      <div className="w-full relative flex flex-col" style={{ maxWidth: 480, background: C.bg, minHeight: "100vh", borderLeft: "1px solid " + C.line, borderRight: "1px solid " + C.line }}>
+      <div className="w-full relative flex flex-col" style={{ maxWidth: 480, background: C.bg, minHeight: "100vh", borderLeft: "1px solid " + C.line, borderRight: "1px solid " + C.line, isolation: "isolate" }}>
+        <LivingBackground A={A} />
         <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} style={{ display: "none" }} aria-hidden="true" />
         <input ref={importRef} type="file" accept="application/json,.json" onChange={onImportFile} style={{ display: "none" }} aria-hidden="true" />
 
@@ -1487,6 +1617,7 @@ export default function BurnLabApp() {
                 <button onClick={() => setOverlay("settings")} aria-label="Settings" className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }}><Settings size={17} color={C.dim} /></button>
               </div>
             </header>
+            <div className="pointer-events-none" style={{ height: 16, marginTop: -16, background: "linear-gradient(180deg," + C.bg + "B3, transparent)" }} aria-hidden="true" />
 
             <main className="flex-1 px-5 overflow-y-auto" style={{ paddingBottom: 150 }}>
 
@@ -1512,7 +1643,7 @@ export default function BurnLabApp() {
                       .reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.length, 0), 0);
                     const SEGS = 22;
                     return (
-                      <div className="relative overflow-hidden rounded-3xl p-5 mb-4" style={{ background: "radial-gradient(120% 150% at 85% -20%," + A.a + "40, transparent 55%), radial-gradient(90% 120% at -10% 115%," + A.b + "2E, transparent 50%), linear-gradient(150deg,#1B1E24,#101216)", border: "1px solid " + A.a + "3A" }}>
+                      <div className="relative overflow-hidden rounded-3xl p-5 mb-4" style={{ background: "radial-gradient(120% 150% at 85% -20%," + A.a + "40, transparent 55%), radial-gradient(90% 120% at -10% 115%," + A.b + "2E, transparent 50%), linear-gradient(150deg,#1B1E24,#101216)", border: "1px solid " + A.a + "3A", borderTop: "1px solid " + A.a + "55", boxShadow: SHADOW.hero }}>
                         <div className="bl-stripes absolute inset-0" aria-hidden="true" />
                         <div className="bl-orb" style={{ width: 130, height: 130, background: A.a, top: -46, right: -24 }} aria-hidden="true" />
                         <div className="relative">
@@ -1769,7 +1900,7 @@ export default function BurnLabApp() {
                           </div>
                           {discardArm ? (
                             <div className="flex items-center gap-2">
-                              <button onClick={() => { setSession(null); setRest(null); setDiscardArm(false); }} className="text-xs font-bold px-3 py-2 rounded-lg" style={{ background: C.red, color: "#fff" }}>Discard</button>
+                              <button onClick={() => { setSession(null); clearRest(); setDiscardArm(false); }} className="text-xs font-bold px-3 py-2 rounded-lg" style={{ background: C.red, color: "#fff" }}>Discard</button>
                               <button onClick={() => setDiscardArm(false)} className="text-xs px-3 py-2 rounded-lg" style={{ background: C.card, color: C.dim, border: "1px solid " + C.line }}>Keep</button>
                             </div>
                           ) : (
@@ -1883,7 +2014,7 @@ export default function BurnLabApp() {
                     const tot = mp.meals.reduce((a, m) => ({ kcal: a.kcal + m.kcal, p: a.p + m.p }), { kcal: 0, p: 0 });
                     return (
                       <>
-                        <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
+                        <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid " + A.a + "44", boxShadow: SHADOW.card }}>
                           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>DAILY TARGET · {(GOAL_LABEL[data.profile.goal] || "").toUpperCase()}</div>
                           <div className="bl-shimmer" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 42, backgroundImage: SHIMMER }}>{fmtNum(t.goal)}</div>
                           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day · maintenance {fmtNum(t.maintain)} kcal</div>
@@ -1928,7 +2059,7 @@ export default function BurnLabApp() {
                         </div>
 
                         {/* day summary */}
-                        <div className="rounded-3xl p-4 mb-3" style={{ background: C.card, border: "1px solid " + C.line }}>
+                        <div className="rounded-3xl p-4 mb-3" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid #ffffff14", boxShadow: SHADOW.card }}>
                           <div className="flex items-end justify-between">
                             <div>
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>EATEN</div>
@@ -1968,12 +2099,12 @@ export default function BurnLabApp() {
                                   <span className="font-bold text-sm">{label}</span>
                                   {kc > 0 && <span className="ml-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{fmtNum(Math.round(kc))} kcal</span>}
                                 </div>
-                                <button onClick={() => { setAddFor(slot); setAddStage("search"); }} aria-label={"Add food to " + label} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: AG }}><Plus size={16} color="#0D0E11" strokeWidth={2.6} /></button>
+                                <button onClick={() => { setAddFor(slot); setAddStage("search"); }} aria-label={"Add food to " + label} className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ background: AG }}><Plus size={16} color="#0D0E11" strokeWidth={2.6} /></button>
                               </div>
                               {items.length > 0 && (
                                 <div className="px-4 pb-2" style={{ borderTop: "1px solid " + C.line }}>
                                   {items.map(e2 => (
-                                    <button key={e2.id} onClick={() => setEntryEdit(e2)} className="w-full flex items-center justify-between py-2 text-left" style={{ borderBottom: "1px solid " + C.line + "88" }}>
+                                    <button key={e2.id} onClick={() => setEntryEdit(e2)} className="w-full flex items-center justify-between py-2 text-left transition-transform active:scale-[0.98]" style={{ borderBottom: "1px solid " + C.line + "88" }}>
                                       <div className="min-w-0">
                                         <div className="text-sm truncate">{e2.name}</div>
                                         <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint }}>{e2.g ? e2.g + "g · " : ""}P{Math.round(e2.p)} C{Math.round(e2.c)} F{Math.round(e2.f)}</div>
@@ -2026,11 +2157,19 @@ export default function BurnLabApp() {
                     <div style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 30 }}>{troph.filter(t => t.done).length}<span style={{ color: C.faint, fontSize: 18 }}> / {troph.length}</span></div>
                     <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim, letterSpacing: 2 }}>TROPHIES UNLOCKED</div>
                   </div>
+                  <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1">
+                    {["All", ...Object.keys(CATEGORY_LABEL)].map(cat => (
+                      <button key={cat} onClick={() => setTrophyCat(cat)} className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors"
+                        style={{ background: trophyCat === cat ? (cat === "All" ? C.text : A.a) : C.card, color: trophyCat === cat ? (cat === "All" ? C.bg : "#0D0E11") : C.dim, border: "1px solid " + (trophyCat === cat ? "transparent" : C.line) }}>
+                        {cat === "All" ? "All" : CATEGORY_LABEL[cat]}
+                      </button>
+                    ))}
+                  </div>
                   {["platinum", "gold", "silver", "bronze"].map(tier => (
                     <div key={tier}>
-                      <SectionLabel>{tier.toUpperCase()}</SectionLabel>
-                      {troph.filter(t => t.tier === tier).map(t => (
-                        <div key={t.id} className="rounded-xl px-4 py-3 mb-2 flex items-center gap-3" style={{ background: C.card, border: "1px solid " + (t.done ? TIER[t.tier] + "66" : C.line), opacity: t.done ? 1 : 0.75 }}>
+                      {troph.some(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat)) && <SectionLabel>{tier.toUpperCase()}</SectionLabel>}
+                      {troph.filter(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat)).map(t => (
+                        <div key={t.id} className="rounded-xl px-4 py-3 mb-2 flex items-center gap-3" style={{ background: C.card, border: "1px solid " + (t.done ? TIER[t.tier] + "66" : C.line), opacity: t.done ? 1 : 0.75, boxShadow: t.done ? "0 6px 20px -8px " + TIER[t.tier] + "77" : "none" }}>
                           <div className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 42, height: 42, background: t.done ? TIER[t.tier] + "22" : C.card2, border: "2px solid " + (t.done ? TIER[t.tier] : C.line) }}>
                             {t.done ? <Trophy size={18} color={TIER[t.tier]} /> : <Lock size={15} color={C.faint} />}
                           </div>
@@ -2237,8 +2376,8 @@ export default function BurnLabApp() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {restLeft > 0 && <button onClick={() => setRest(r => ({ ...r, end: r.end + 30000, total: r.total + 30 }))} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: C.card, border: "1px solid " + C.line, color: C.text }}>+30s</button>}
-                      <button onClick={() => setRest(null)} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: restLeft === 0 ? "#ffffff22" : C.card, border: "1px solid " + (restLeft === 0 ? "#ffffff44" : C.line), color: restLeft === 0 ? "#fff" : C.dim }}>
+                      {restLeft > 0 && <button onClick={() => scheduleRest(rest.end + 30000, rest.total + 30)} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: C.card, border: "1px solid " + C.line, color: C.text }}>+30s</button>}
+                      <button onClick={clearRest} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: restLeft === 0 ? "#ffffff22" : C.card, border: "1px solid " + (restLeft === 0 ? "#ffffff44" : C.line), color: restLeft === 0 ? "#fff" : C.dim }}>
                         {restLeft === 0 ? "Dismiss" : "Skip"}
                       </button>
                     </div>
@@ -2307,7 +2446,7 @@ export default function BurnLabApp() {
                 onClose={() => setOverlay(null)}
                 onRedo={() => { setOverlay(null); save({ ...data, profile: null }); }}
                 confirmReset={confirmReset} setConfirmReset={setConfirmReset}
-                onReset={async () => { try { await store.delete("burnlab-data-v2"); } catch (e) {} try { await store.delete("burnlab-photos-v1"); } catch (e) {} setData(DEFAULTS); setPhotos([]); setConfirmReset(false); setOverlay(null); setSession(null); }} />
+                onReset={async () => { if (data.settings.vibrate) haptic("warning"); try { await store.delete("burnlab-data-v2"); } catch (e) {} try { await store.delete("burnlab-photos-v1"); } catch (e) {} setData(DEFAULTS); setPhotos([]); setConfirmReset(false); setOverlay(null); setSession(null); }} />
             )}
 
             {/* ======= EXERCISE DETAIL MODAL ======= */}
@@ -2404,7 +2543,7 @@ export default function BurnLabApp() {
                       {foodQuery.trim() === "" && recentFoods.length > 0 && (<>
                         <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5, marginBottom: 6 }}>RECENT</div>
                         {recentFoods.map(fo => (
-                          <button key={fo.i} onClick={() => { setPortionFood(fo); setPortionG(String(fo.sg || 100)); setAddStage("portion"); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 mb-1.5 text-left" style={{ background: C.card, border: "1px solid " + C.line }}>
+                          <button key={fo.i} onClick={() => { setPortionFood(fo); setPortionG(String(fo.sg || 100)); setAddStage("portion"); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 mb-1.5 text-left transition-transform active:scale-[0.98]" style={{ background: C.card, border: "1px solid " + C.line }}>
                             <span className="text-sm truncate">{fo.n}</span>
                             <span className="shrink-0 pl-2" style={{ fontFamily: F.mono, fontSize: 10.5, color: C.dim }}>{Math.round(fo.k * (fo.sg || 100) / 100)} kcal · {fo.sg || 100}g</span>
                           </button>
@@ -2415,7 +2554,7 @@ export default function BurnLabApp() {
                         .filter(fo => fo.n.toLowerCase().includes(foodQuery.trim().toLowerCase()))
                         .slice(0, 40)
                         .map(fo => (
-                          <button key={fo.i} onClick={() => { setPortionFood(fo); setPortionG(String(fo.sg || 100)); setAddStage("portion"); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 mb-1.5 text-left" style={{ background: C.card, border: "1px solid " + C.line }}>
+                          <button key={fo.i} onClick={() => { setPortionFood(fo); setPortionG(String(fo.sg || 100)); setAddStage("portion"); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 mb-1.5 text-left transition-transform active:scale-[0.98]" style={{ background: C.card, border: "1px solid " + C.line }}>
                             <div className="min-w-0">
                               <div className="text-sm truncate">{fo.n}{String(fo.i).startsWith("cf-") && <span style={{ fontFamily: F.mono, fontSize: 8.5, color: A.a }}> · YOURS</span>}</div>
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint }}>{fo.k} kcal · P{fo.p} C{fo.c} F{fo.f} per 100g</div>
@@ -2434,7 +2573,7 @@ export default function BurnLabApp() {
                           {offState === "error" && <p className="text-xs mb-2" style={{ color: C.faint }}>Couldn't reach the worldwide database just now - built-in foods still work.</p>}
                           {offState === "done" && offResults.length === 0 && <p className="text-xs mb-2" style={{ color: C.faint }}>No worldwide matches for "{foodQuery}".</p>}
                           {offResults.map(fo => (
-                            <button key={fo.i} onClick={() => { setPortionFood(fo); setPortionG("100"); setAddStage("portion"); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 mb-1.5 text-left" style={{ background: C.card, border: "1px solid " + C.blue + "33" }}>
+                            <button key={fo.i} onClick={() => { setPortionFood(fo); setPortionG("100"); setAddStage("portion"); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 mb-1.5 text-left transition-transform active:scale-[0.98]" style={{ background: C.card, border: "1px solid " + C.blue + "33" }}>
                               <div className="min-w-0">
                                 <div className="text-sm truncate">{fo.n}</div>
                                 <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint }}>{fo.k} kcal · P{fo.p} C{fo.c} F{fo.f} per 100g</div>
@@ -2688,9 +2827,28 @@ export default function BurnLabApp() {
               </div>
             )}
 
+            {/* ======= TROPHY UNLOCK TOAST (outside a workout — food/weigh-in/photo) ======= */}
+            {trophyToast && trophyToast.length > 0 && (
+              <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000cc" }} onClick={() => setTrophyToast(null)}>
+                <div className="w-full rounded-3xl p-6 text-center bl-fade" style={{ maxWidth: 360, background: C.card2, border: "1px solid " + TIER.gold + "55" }} onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: TIER.gold, letterSpacing: 3 }}><Trophy size={13} /> {trophyToast.length > 1 ? "TROPHIES UNLOCKED" : "TROPHY UNLOCKED"}</div>
+                  <div className="mt-3 rounded-xl p-3" style={{ background: TIER.gold + "14", border: "1px solid " + TIER.gold + "55" }}>
+                    {trophyToast.map(t => (
+                      <div key={t.id} className="flex items-center justify-center gap-2 py-1.5">
+                        <Trophy size={16} color={TIER[t.tier]} />
+                        <span className="text-sm font-bold">{t.name}</span>
+                        <span className="text-xs" style={{ color: C.faint }}>{t.tier.toUpperCase()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <GradBtn A={A} onClick={() => setTrophyToast(null)} className="w-full mt-4 py-3 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 18, letterSpacing: 1 }}>NICE</GradBtn>
+                </div>
+              </div>
+            )}
+
             {/* ======= BOTTOM NAV — floating pill ======= */}
             <nav className="fixed left-1/2 -translate-x-1/2 w-full z-10 px-5" style={{ maxWidth: 480, bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
-              <div className="flex items-center justify-between px-3 py-2 rounded-full shadow-lg" style={{ background: "#14161BF0", border: "1px solid " + C.line, backdropFilter: "blur(14px)" }}>
+              <div className="flex items-center justify-between px-3 py-2 rounded-full" style={{ background: "#14161BF0", border: "1px solid " + C.line, backdropFilter: "blur(14px)", boxShadow: SHADOW.nav }}>
                 {[
                   { id: "home", label: "Home", icon: Home },
                   { id: "train", label: "Train", icon: Dumbbell },
@@ -2701,9 +2859,9 @@ export default function BurnLabApp() {
                   const active = tab === t.id;
                   const Icon = t.icon;
                   return (
-                    <button key={t.id} onClick={() => { setTab(t.id); setOverlay(null); }} aria-label={t.label} aria-current={active ? "page" : undefined}
+                    <button key={t.id} onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab(t.id); setOverlay(null); }} aria-label={t.label} aria-current={active ? "page" : undefined}
                       className="flex flex-col items-center justify-center rounded-full transition-all active:scale-90"
-                      style={{ width: 46, height: 46, background: active ? AG : "transparent" }}>
+                      style={{ width: 46, height: 46, background: active ? AG : "transparent", boxShadow: active ? SHADOW.glow(A.a) : "none" }}>
                       <Icon size={20} color={active ? "#0D0E11" : C.faint} strokeWidth={active ? 2.5 : 2} />
                       {!active && <span style={{ fontFamily: F.mono, fontSize: 7, letterSpacing: 0.5, color: C.faint, marginTop: 1 }}>{t.label.toUpperCase()}</span>}
                     </button>
@@ -2829,7 +2987,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           <div className="rounded-2xl px-4 py-1 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
             <Row label="Start automatically after a set"><Toggle on={data.settings.autoRest} onChange={v => setSetting("autoRest", v)} label="Auto rest timer" /></Row>
             <Row label="Finish sound"><Toggle on={data.settings.sound} onChange={v => { unlockAudio(); setSetting("sound", v); if (v) playDing(); }} label="Timer finish sound" /></Row>
-            <Row label="Vibration (Android)"><Toggle on={data.settings.vibrate} onChange={v => { setSetting("vibrate", v); if (v) buzz(); }} label="Timer vibration" /></Row>
+            <Row label="Vibration (Android)"><Toggle on={data.settings.vibrate} onChange={v => { setSetting("vibrate", v); if (v) haptic("timerDone"); }} label="Timer vibration" /></Row>
             <div className="flex items-center justify-between py-3" style={{ borderBottom: "1px solid " + C.line }}>
               <div>
                 <div className="text-sm font-semibold">Rest length</div>
@@ -2840,7 +2998,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
                 {[30, 45, 60, 90, 120, 150, 180, 240].map(v => <option key={v} value={v}>{v >= 60 ? (v / 60) + " min" + (v % 60 ? " " + (v % 60) + "s" : "") : v + "s"}</option>)}
               </select>
             </div>
-            <p className="text-xs py-3" style={{ color: C.faint }}>The timer runs on the clock, not the screen - lock your phone and it stays accurate. The chime plays when the app is open; where your browser supports it, a notification fires if you're elsewhere.</p>
+            <p className="text-xs py-3" style={{ color: C.faint }}>The timer runs on the clock, not the screen - lock your phone and it stays accurate. The chime plays when the app is open; where your browser supports it, a notification fires if you're elsewhere. Installed as an app, a background service worker backs this up so alerts land more reliably while the app is minimised - full lock-screen alarms still aren't possible from the web.</p>
           </div>
 
           <SectionLabel>PROGRESS PHOTOS</SectionLabel>
@@ -2918,7 +3076,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v2.5 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v3.1 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>

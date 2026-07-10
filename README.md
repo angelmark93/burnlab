@@ -2,6 +2,14 @@
 
 Science-based workout tracker built with Vite + React + Tailwind. Installable PWA with offline support. All data (profile, workouts, trophies) lives in the browser's localStorage on your device — no backend.
 
+## What's new in v3.1
+
+- **35 trophies** across four categories — training (20), nutrition (5), weigh-ins (5) and progress photos (4), plus the platinum "Burn Legend" for unlocking everything else. A category filter row sits above the tier list in the Trophies tab, and unlocking one now surfaces a toast from wherever it happens (finishing a workout, logging food, weighing in, or adding a photo), not just after a session.
+- **Graded haptics** — a small vibration-pattern system (tap/light/medium/success/warning/PR/trophy) replacing the single buzz, baked into every gradient button and toggle plus contextual moments (set complete, PR, trophy unlock, destructive actions).
+- **Living background** — a slow, accent-tinted drifting glow now sits behind the whole app (not just the home hero), recoloring instantly when you switch accent theme in Settings.
+- **Rest-timer reliability** — the installed app's service worker now gets handed the rest-timer end time directly and fires its own notification as a backstop, alongside a silent keep-alive tone that reduces background-tab throttling. Full lock-screen alarms still aren't possible from the web — see the platform-honesty note below.
+- **Visual refresh** — softer elevation/glow shadows on cards, buttons, rings and the bottom nav, glass-edge highlights on hero cards, and consistent press feedback across tappable rows.
+
 ## What's new in v2.5
 
 - **Barcode scanning** — tap the scan button in the add-food sheet, point at a product barcode, and it lands on the portion screen with macros filled in. Decoding happens on-device (ZXing, lazy-loaded so it costs nothing until used); the product lookup uses Open Food Facts, so it needs a connection - offline you get a clear message and name-search/create-food fallbacks.
