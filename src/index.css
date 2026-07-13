@@ -12,9 +12,21 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 *:focus-visible { outline: 2px solid #FF5722; outline-offset: 1px; border-radius: 4px; }
 ::-webkit-scrollbar { width: 0; height: 0; }
 
-/* Entry animation for views */
-.bl-fade { animation: blfade 0.25s ease; }
-@keyframes blfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Entry animation for views — bigger, springier cinematic reveal */
+.bl-fade { animation: blfade 0.5s cubic-bezier(0.22, 0.9, 0.3, 1); }
+@keyframes blfade { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
+
+/* Film grain — subtle static noise over the black for premium OLED materiality */
+.bl-grain::after {
+  content: ""; position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* Hero edge-glow: a slow breathing radial behind the single hero moment */
+.bl-heroglow { animation: blheroglow 7s ease-in-out infinite; }
+@keyframes blheroglow { 0%, 100% { opacity: 0.45; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.08); } }
+/* big hero number rise */
+.bl-rise { animation: blrise 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) both; }
+@keyframes blrise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
 
 /* Staggered entrance for card grids/lists - pair with an inline --i custom property.
    Two variants: bl-stagger fades+slides (opacity 0->1); bl-stagger-slide only moves,

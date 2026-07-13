@@ -1,7 +1,7 @@
 // BurnLab service worker — stale-while-revalidate for same-origin GETs,
 // plus a best-effort rest-timer notification backstop.
 // Bump the CACHE name whenever you deploy an update.
-const CACHE = "burnlab-v9";
+const CACHE = "burnlab-v10";
 
 self.addEventListener("install", () => self.skipWaiting());
 

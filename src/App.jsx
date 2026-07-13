@@ -26,10 +26,12 @@ const C = {
   red: "#F0603A", blue: "#A1A1AA", yellow: "#FF5722", green: "#A1A1AA",
   plate5: "#E4E4E7", plate25: "#71717A",
 };
+/* Cinematic Athletic type system: Anton (ultra-heavy condensed) carries every title + hero number;
+   Archivo (modern grotesk) replaces Barlow for body/UI; IBM Plex Mono stays for data + metadata. */
 const F = {
-  brand: "'Orbitron', sans-serif",
-  disp: "'Barlow Condensed', sans-serif",
-  body: "'Barlow', sans-serif",
+  brand: "'Archivo', sans-serif",
+  disp: "'Anton', sans-serif",
+  body: "'Archivo', sans-serif",
   mono: "'IBM Plex Mono', monospace",
 };
 /* Single locked accent — high-voltage orange. All four legacy theme keys resolve to it so any
@@ -944,13 +946,53 @@ function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, gl
   const A = accent || ACCENTS.ember;
   const animated = useCountUp(value);
   const shown = typeof value === "number" ? animated.toFixed(decimals) : value;
-  const grad = "linear-gradient(180deg," + A.b + "," + A.a + ")";
+  const grad = "linear-gradient(175deg,#FFFFFF 8%," + A.b + " 55%," + A.a + ")";
   return (
     <span className={"inline-flex items-baseline " + className} style={style}>
-      {prefix != null && <span style={{ fontFamily: F.brand, fontWeight: 600, fontSize: size * 0.38, color: C.dim, marginRight: 2 }}>{prefix}</span>}
-      <span style={{ fontFamily: F.mono, fontWeight: 700, fontSize: size, lineHeight: 1, letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 14px " + A.a + "66)" : "none" }}>{shown}</span>
-      {suffix != null && <span style={{ fontFamily: F.brand, fontWeight: 600, fontSize: size * 0.38, color: C.dim, marginLeft: 3, paddingBottom: size * 0.09 }}>{suffix}</span>}
+      {prefix != null && <span style={{ fontFamily: F.mono, fontWeight: 600, fontSize: size * 0.3, color: C.dim, marginRight: 3 }}>{prefix}</span>}
+      <span style={{ fontFamily: F.disp, fontSize: size, lineHeight: 0.85, letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 22px " + A.a + "55)" : "none" }}>{shown}</span>
+      {suffix != null && <span style={{ fontFamily: F.disp, fontSize: size * 0.42, color: A.a, marginLeft: 4, paddingBottom: size * 0.06 }}>{suffix}</span>}
     </span>
+  );
+}
+
+/* HeroArc — the signature moment: a 270° gauge with a glowing accent sweep, animated fill, a huge
+   Anton numeral centered, and a soft breathing edge-glow. One per screen, max. */
+function HeroArc({ value, max = 100, size = 236, label, sublabel, accent, unit }) {
+  const A = accent || ACCENTS.ember;
+  const [anim, setAnim] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setAnim(true), 140); return () => clearTimeout(t); }, []);
+  const shown = useCountUp(typeof value === "number" ? value : 0);
+  const stroke = Math.round(size * 0.05);
+  const r = (size - stroke) / 2 - 6;
+  const cx = size / 2, cy = size / 2;
+  const START = 135, SWEEP = 270;
+  const circ = 2 * Math.PI * r;
+  const arcLen = circ * (SWEEP / 360);
+  const pct = Math.max(0, Math.min(1, (anim ? value : 0) / (max || 1)));
+  const polar = (deg) => { const a = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+  const [sx, sy] = polar(START), [ex, ey] = polar(START + SWEEP);
+  const trackPath = "M " + sx + " " + sy + " A " + r + " " + r + " 0 " + (SWEEP > 180 ? 1 : 0) + " 1 " + ex + " " + ey;
+  return (
+    <div className="relative flex items-center justify-center mx-auto" style={{ width: size, height: size }}>
+      <div className="bl-heroglow absolute rounded-full" style={{ width: size * 0.72, height: size * 0.72, background: A.a, filter: "blur(56px)" }} aria-hidden="true" />
+      <svg width={size} height={size} className="relative" style={{ overflow: "visible" }} aria-hidden="true">
+        <defs>
+          <linearGradient id="heroarc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={A.b} /><stop offset="100%" stopColor={A.a} /></linearGradient>
+        </defs>
+        <path d={trackPath} fill="none" stroke={C.card2} strokeWidth={stroke} strokeLinecap="round" />
+        <path d={trackPath} fill="none" stroke="url(#heroarc)" strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={(arcLen * pct) + " " + (arcLen * 2)} style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.22,0.9,0.3,1)", filter: "drop-shadow(0 0 12px " + A.a + "cc)" }} />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <div className="flex items-start">
+          <span style={{ fontFamily: F.disp, fontSize: size * 0.36, lineHeight: 0.82, letterSpacing: -1, color: C.text }}>{typeof value === "number" ? Math.round(shown) : value}</span>
+          {unit && <span style={{ fontFamily: F.disp, fontSize: size * 0.14, color: A.a, marginTop: 4, marginLeft: 3 }}>{unit}</span>}
+        </div>
+        {label && <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: C.faint, marginTop: 8 }}>{label}</span>}
+        {sublabel && <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 1, color: A.a, marginTop: 3 }}>{sublabel}</span>}
+      </div>
+    </div>
   );
 }
 
@@ -1945,7 +1987,7 @@ export default function BurnLabApp() {
   /* ================= RENDER ================= */
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ background: "#000000", fontFamily: F.body, color: C.text }}>
-      <div className="w-full relative flex flex-col" style={{ maxWidth: 480, background: C.bg, minHeight: "100vh", borderLeft: "1px solid " + C.line, borderRight: "1px solid " + C.line, isolation: "isolate" }}>
+      <div className="w-full relative flex flex-col bl-grain" style={{ maxWidth: 480, background: C.bg, minHeight: "100vh", borderLeft: "1px solid " + C.line, borderRight: "1px solid " + C.line, isolation: "isolate" }}>
         <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} style={{ display: "none" }} aria-hidden="true" />
         <input ref={importRef} type="file" accept="application/json,.json" onChange={onImportFile} style={{ display: "none" }} aria-hidden="true" />
 
@@ -1963,32 +2005,31 @@ export default function BurnLabApp() {
           <Onboarding A={A} onDone={onOnboardDone} />
         ) : (
           <>
-            {/* ======= HEADER ======= */}
-            <header className="flex items-center justify-between px-6 pb-4" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
-              <div style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 19, letterSpacing: 2, lineHeight: 1 }}>
-                BURN<span className="bl-shimmer" style={{ backgroundImage: SHIMMER }}>LAB</span>
+            {/* ======= HEADER — minimal, chrome pared back; the screen title carries identity ======= */}
+            <header className="flex items-center justify-between px-6 pb-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
+              <div style={{ fontFamily: F.brand, fontWeight: 900, fontSize: 15, letterSpacing: 1, lineHeight: 1, color: C.faint }}>
+                BURN<span style={{ color: A.a }}>LAB</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setOverlay("library")} aria-label="Exercise library" className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }}><BookOpen size={17} color={C.dim} /></button>
-                <button onClick={() => setOverlay("settings")} aria-label="Your profile" className="rounded-full flex items-center justify-center" style={{ width: 34, height: 34, background: AG, fontFamily: F.disp, fontWeight: 800, fontSize: 14, color: "#0D0E11" }}>
+              <div className="flex items-center gap-2.5">
+                <button onClick={() => setOverlay("library")} aria-label="Exercise library" className="transition-transform active:scale-90"><BookOpen size={19} color={C.faint} /></button>
+                <button onClick={() => setOverlay("settings")} aria-label="Your profile" className="rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ width: 30, height: 30, background: "transparent", border: "1.5px solid " + A.a, fontFamily: F.brand, fontWeight: 800, fontSize: 12, color: A.a }}>
                   {(firstName || "A").slice(0, 1).toUpperCase()}
                 </button>
               </div>
             </header>
-            <div className="pointer-events-none" style={{ height: 16, marginTop: -16, background: "linear-gradient(180deg," + C.bg + "B3, transparent)" }} aria-hidden="true" />
 
             <main className="flex-1 px-6 overflow-y-auto" style={{ paddingBottom: 150 }}>
 
               {/* ================= HOME ================= */}
               {tab === "home" && (
                 <div className="bl-fade">
-                  {/* greeting row - slim, single line */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span style={{ fontFamily: F.mono, fontSize: 10.5, color: C.dim, letterSpacing: 1 }}>GOOD {greet}, {(firstName || "ATHLETE").toUpperCase()}</span>
-                    <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1 }}>{new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</span>
+                  {/* greeting — big editorial */}
+                  <div className="mb-1">
+                    <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 3 }}>GOOD {greet} · {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
+                    <div style={{ fontFamily: F.disp, fontSize: 40, lineHeight: 0.95, letterSpacing: -1, textTransform: "uppercase", marginTop: 4 }}>{firstName || "Athlete"}</div>
                   </div>
 
-                  {/* weekly burn hero */}
+                  {/* weekly burn — signature HeroArc moment, full-bleed on black */}
                   {(() => {
                     const goalSessions = PER_WEEK[data.program] || 3;
                     const pct = Math.min(100, Math.round((workoutsThisWeek / goalSessions) * 100));
@@ -1996,35 +2037,23 @@ export default function BurnLabApp() {
                       .reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.reduce((x, s) => x + s.w * s.r, 0), 0), 0);
                     const weekSets = data.history.filter(h => new Date(h.date).getTime() > Date.now() - 7 * 864e5)
                       .reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.length, 0), 0);
-                    const SEGS = 22;
                     const heroStats = [
                       { label: "SETS", val: weekSets },
                       { label: "KG LIFTED", val: fmtNum(Math.round(weekTonnage)) },
                       ...(data.profile && data.profile.targets ? [{ label: "KCAL LEFT", val: fmtNum(Math.max(0, data.profile.targets.goal - eatenToday)) }] : []),
                     ];
                     return (
-                      <div className="relative overflow-hidden rounded-3xl p-6 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
-                        <div className="relative">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 3 }}><Flame size={12} color={A.a} /> WEEKLY BURN</div>
-                            <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1, fontVariantNumeric: "tabular-nums" }}>{workoutsThisWeek}/{goalSessions} SESSIONS</span>
-                          </div>
-                          <div className="flex items-end gap-1 mt-2">
-                            <HeroNumber value={pct} suffix="%" size={72} accent={A} />
-                          </div>
-                          <div className="flex gap-1 mt-4" aria-hidden="true">
-                            {Array.from({ length: SEGS }, (_, i) => (
-                              <span key={i} className="flex-1 rounded-full" style={{ height: 6, background: i < Math.round((pct / 100) * SEGS) ? A.a : "#ffffff12" }} />
-                            ))}
-                          </div>
-                          <div className="grid mt-5 pt-4" style={{ gridTemplateColumns: "repeat(" + heroStats.length + ",1fr)", borderTop: "1px solid " + C.line }}>
-                            {heroStats.map((s, i) => (
-                              <div key={s.label} className="text-center" style={{ borderLeft: i > 0 ? "1px solid " + C.line : "none" }}>
-                                <div style={{ fontFamily: F.disp, fontSize: 22, fontWeight: 800, letterSpacing: -0.5, color: C.text, fontVariantNumeric: "tabular-nums" }}>{s.val}</div>
-                                <div style={{ fontFamily: F.mono, fontSize: 8, color: C.faint, letterSpacing: 2, marginTop: 2 }}>{s.label}</div>
-                              </div>
-                            ))}
-                          </div>
+                      <div className="mb-8 mt-2">
+                        <div className="bl-rise">
+                          <HeroArc value={pct} max={100} size={244} unit="%" label="WEEKLY BURN" sublabel={workoutsThisWeek + " / " + goalSessions + " SESSIONS"} accent={A} />
+                        </div>
+                        <div className="grid mt-6" style={{ gridTemplateColumns: "repeat(" + heroStats.length + ",1fr)" }}>
+                          {heroStats.map((s, i) => (
+                            <div key={s.label} className="text-center px-2" style={{ borderLeft: i > 0 ? "1px solid " + C.line : "none" }}>
+                              <div style={{ fontFamily: F.disp, fontSize: 30, letterSpacing: -0.5, color: C.text, lineHeight: 0.9, fontVariantNumeric: "tabular-nums" }}>{s.val}</div>
+                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 2, marginTop: 5 }}>{s.label}</div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
@@ -3643,7 +3672,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v5.0 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v5.1 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>
