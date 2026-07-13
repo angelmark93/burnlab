@@ -8,6 +8,7 @@ import {
   Play, Check, X, Plus, Info, Search, Award, Flame, Timer, Camera, ArrowUpRight, Weight, ScanLine,
   ChevronDown, ChevronUp, ChevronLeft, Trash2, Lock, Repeat, HelpCircle,
 } from "lucide-react";
+import { BurnLabLogo } from "./components/ui/BurnLabLogo";
 
 /* ---- device storage (localStorage) ---- */
 const store = {
@@ -28,16 +29,22 @@ const C = {
 };
 /* Cinematic Athletic type system: Anton (ultra-heavy condensed) carries every title + hero number;
    Archivo (modern grotesk) replaces Barlow for body/UI; IBM Plex Mono stays for data + metadata. */
+/* NIKE custom display face carries titles + hero numbers (falls back to Anton); Archivo body/UI. */
 const F = {
   brand: "'Archivo', sans-serif",
-  disp: "'Anton', sans-serif",
+  disp: "'NIKE', 'Anton', sans-serif",
   body: "'Archivo', sans-serif",
   mono: "'IBM Plex Mono', monospace",
 };
-/* Single locked accent — high-voltage orange. All four legacy theme keys resolve to it so any
-   previously-saved settings.accent still works; the Settings picker is removed. */
+/* Accent themes — orange is the default brand, with blue / green / yellow reinstated as options.
+   Legacy saved keys (ember/ice/volt/violet) map onto the current set so old profiles still resolve. */
 const ORANGE = { name: "Orange", a: "#FF5722", b: "#FF7A45" };
-const ACCENTS = { ember: ORANGE, ice: ORANGE, volt: ORANGE, violet: ORANGE };
+const ACCENTS = {
+  ember:  ORANGE,
+  ice:    { name: "Blue",   a: "#2E8BFF", b: "#5CC8FF" },
+  volt:   { name: "Green",  a: "#22C55E", b: "#7CE88F" },
+  violet: { name: "Yellow", a: "#F2B01E", b: "#FFD34D" },
+};
 /* soft elevation + accent-glow helpers, layered onto the flat card borders for a sleeker glass feel */
 const SHADOW = {
   card: "0 1px 0 0 rgba(255,255,255,0.035) inset, 0 10px 28px -16px rgba(0,0,0,0.6)",
@@ -905,7 +912,7 @@ const ScreenHead = ({ eyebrow, title, right }) => (
   <div className="flex items-end justify-between mb-5 mt-1">
     <div>
       {eyebrow && <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: "#FF5722", textTransform: "uppercase", marginBottom: 2 }}>{eyebrow}</div>}
-      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 44, lineHeight: 0.92, letterSpacing: -1.5, textTransform: "uppercase" }}>{title}</div>
+      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 44, lineHeight: 1.02, letterSpacing: -1.5, textTransform: "uppercase" }}>{title}</div>
     </div>
     {right != null && <div className="shrink-0 pb-1">{right}</div>}
   </div>
@@ -950,7 +957,7 @@ function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, gl
   return (
     <span className={"inline-flex items-baseline " + className} style={style}>
       {prefix != null && <span style={{ fontFamily: F.mono, fontWeight: 600, fontSize: size * 0.3, color: C.dim, marginRight: 3 }}>{prefix}</span>}
-      <span style={{ fontFamily: F.disp, fontSize: size, lineHeight: 0.85, letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 22px " + A.a + "55)" : "none" }}>{shown}</span>
+      <span style={{ fontFamily: F.disp, fontSize: size, lineHeight: 1.12, paddingTop: "0.06em", letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 22px " + A.a + "55)" : "none" }}>{shown}</span>
       {suffix != null && <span style={{ fontFamily: F.disp, fontSize: size * 0.42, color: A.a, marginLeft: 4, paddingBottom: size * 0.06 }}>{suffix}</span>}
     </span>
   );
@@ -986,7 +993,7 @@ function HeroArc({ value, max = 100, size = 236, label, sublabel, accent, unit }
       </svg>
       <div className="absolute flex flex-col items-center">
         <div className="flex items-start">
-          <span style={{ fontFamily: F.disp, fontSize: size * 0.36, lineHeight: 0.82, letterSpacing: -1, color: C.text }}>{typeof value === "number" ? Math.round(shown) : value}</span>
+          <span style={{ fontFamily: F.disp, fontSize: size * 0.36, lineHeight: 1.05, letterSpacing: -1, color: C.text }}>{typeof value === "number" ? Math.round(shown) : value}</span>
           {unit && <span style={{ fontFamily: F.disp, fontSize: size * 0.14, color: A.a, marginTop: 4, marginLeft: 3 }}>{unit}</span>}
         </div>
         {label && <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: C.faint, marginTop: 8 }}>{label}</span>}
@@ -1794,6 +1801,7 @@ export default function BurnLabApp() {
 
   const A = ACCENTS[data.settings.accent] || ACCENTS.ember;
   const AG = "linear-gradient(90deg," + A.a + "," + A.b + ")";
+  const AGV = "linear-gradient(to bottom," + A.b + "," + A.a + ")"; // vertical accent (buttons/FAB/pills)
   const SHIMMER = "linear-gradient(90deg," + A.a + "," + A.b + ",#FAFAFA," + A.a + ")";
   const gym = (data.profile && data.profile.gym) || "full";
   const focusMuscles = (data.profile && data.profile.focusMuscles) || [];
@@ -2007,9 +2015,7 @@ export default function BurnLabApp() {
           <>
             {/* ======= HEADER — minimal, chrome pared back; the screen title carries identity ======= */}
             <header className="flex items-center justify-between px-6 pb-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
-              <div style={{ fontFamily: F.brand, fontWeight: 900, fontSize: 15, letterSpacing: 1, lineHeight: 1, color: C.faint }}>
-                BURN<span style={{ color: A.a }}>LAB</span>
-              </div>
+              <BurnLabLogo className="h-7" />
               <div className="flex items-center gap-2.5">
                 <button onClick={() => setOverlay("library")} aria-label="Exercise library" className="transition-transform active:scale-90"><BookOpen size={19} color={C.faint} /></button>
                 <button onClick={() => setOverlay("settings")} aria-label="Your profile" className="rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ width: 30, height: 30, background: "transparent", border: "1.5px solid " + A.a, fontFamily: F.brand, fontWeight: 800, fontSize: 12, color: A.a }}>
@@ -2026,7 +2032,7 @@ export default function BurnLabApp() {
                   {/* greeting — big editorial */}
                   <div className="mb-1">
                     <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 3 }}>GOOD {greet} · {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
-                    <div style={{ fontFamily: F.disp, fontSize: 40, lineHeight: 0.95, letterSpacing: -1, textTransform: "uppercase", marginTop: 4 }}>{firstName || "Athlete"}</div>
+                    <div style={{ fontFamily: F.disp, fontSize: 40, lineHeight: 1.04, letterSpacing: -1, textTransform: "uppercase", marginTop: 4 }}>{firstName || "Athlete"}</div>
                   </div>
 
                   {/* weekly burn — signature HeroArc moment, full-bleed on black */}
@@ -2050,7 +2056,7 @@ export default function BurnLabApp() {
                         <div className="grid mt-6" style={{ gridTemplateColumns: "repeat(" + heroStats.length + ",1fr)" }}>
                           {heroStats.map((s, i) => (
                             <div key={s.label} className="text-center px-2" style={{ borderLeft: i > 0 ? "1px solid " + C.line : "none" }}>
-                              <div style={{ fontFamily: F.disp, fontSize: 30, letterSpacing: -0.5, color: C.text, lineHeight: 0.9, fontVariantNumeric: "tabular-nums" }}>{s.val}</div>
+                              <div style={{ fontFamily: F.disp, fontSize: 30, letterSpacing: -0.5, color: C.text, lineHeight: 1.06, fontVariantNumeric: "tabular-nums" }}>{s.val}</div>
                               <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 2, marginTop: 5 }}>{s.label}</div>
                             </div>
                           ))}
@@ -2072,7 +2078,7 @@ export default function BurnLabApp() {
                           return (
                             <div key={i} className="bl-spring rounded-2xl py-2.5 text-center hover:-translate-y-1"
                               style={did
-                                ? { background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", border: "1px solid transparent", boxShadow: "0 6px 18px -6px " + A.a + "88" }
+                                ? { background: AGV, border: "1px solid transparent", boxShadow: "0 6px 18px -6px " + A.a + "88" }
                                 : { background: "rgba(24,24,27,0.20)", border: "1px solid " + (isToday ? A.a : "transparent") }}>
                               <div style={{ fontFamily: F.mono, fontSize: 8.5, letterSpacing: 1, color: did ? "#000" : C.faint }}>{"MTWTFSS"[i]}</div>
                               <div style={{ fontFamily: F.disp, fontSize: 16, color: did ? "#000" : isToday ? C.text : C.dim }}>{d.getDate()}</div>
@@ -2152,7 +2158,7 @@ export default function BurnLabApp() {
                             <span className="flex items-center justify-center rounded-full" style={{ width: 36, height: 36, background: A.a + "1A", border: "1px solid " + A.a + "33" }}><Icon size={16} color={A.a} /></span>
                             <ArrowUpRight size={9} color={C.text} style={{ opacity: 0.2 }} />
                           </div>
-                          <div style={{ fontFamily: F.disp, fontSize: 36, lineHeight: 0.9, letterSpacing: -0.5 }}>{typeof c.val === "number" ? fmtNum(c.val) : c.val}</div>
+                          <div style={{ fontFamily: F.disp, fontSize: 36, lineHeight: 1.06, letterSpacing: -0.5 }}>{typeof c.val === "number" ? fmtNum(c.val) : c.val}</div>
                           <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 2, marginTop: 6 }}>{c.label}</div>
                           <div className="text-xs truncate" style={{ color: C.dim, marginTop: 1 }}>{c.sub}</div>
                         </button>
@@ -2479,7 +2485,7 @@ export default function BurnLabApp() {
                                   )}
                                   <button onClick={() => toggleDone(cur, i, it.rest)} aria-label={"Mark set " + labelNo + (s.done ? " not done" : " done")}
                                     className="bl-spring flex items-center justify-center active:scale-90"
-                                    style={{ height: 44, width: 42, borderRadius: 12, background: s.done ? "linear-gradient(to bottom,#ff6b3d,#ff5722)" : "rgba(0,0,0,0.8)", border: s.done ? "none" : "1px solid rgba(255,255,255,0.10)", boxShadow: s.done ? "0 0 14px " + A.a + "77, inset 0 1px 1px rgba(255,255,255,0.3)" : "none" }}>
+                                    style={{ height: 44, width: 42, borderRadius: 12, background: s.done ? AGV : "rgba(0,0,0,0.8)", border: s.done ? "none" : "1px solid rgba(255,255,255,0.10)", boxShadow: s.done ? "0 0 14px " + A.a + "77, inset 0 1px 1px rgba(255,255,255,0.3)" : "none" }}>
                                     <Check size={17} color={s.done ? "#000" : C.faint} strokeWidth={s.done ? 3 : 2} />
                                   </button>
                                 </div>
@@ -2500,14 +2506,14 @@ export default function BurnLabApp() {
                             style={{ width: 54, color: C.text, opacity: cur === 0 ? 0.35 : 1 }}><ChevronLeft size={18} color={C.text} /></button>
                           {cur < session.items.length - 1 ? (
                             <button onClick={goNext} className="bl-spring relative overflow-hidden flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl active:scale-[0.98]"
-                              style={{ background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
+                              style={{ background: AGV, boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
                               <span className="absolute left-4 right-4 top-0 pointer-events-none" style={{ height: 1.5, background: "rgba(255,255,255,0.55)", borderRadius: 2 }} aria-hidden="true" />
                               <span style={{ fontFamily: F.disp, fontSize: 19, letterSpacing: -0.3, color: "#000" }}>NEXT EXERCISE</span>
                               <ChevronLeft size={18} color="#000" strokeWidth={2.6} style={{ transform: "rotate(180deg)" }} />
                             </button>
                           ) : (
                             <button onClick={finishSession} className="bl-spring relative overflow-hidden flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl active:scale-[0.98]"
-                              style={{ background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
+                              style={{ background: AGV, boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
                               <span className="absolute left-4 right-4 top-0 pointer-events-none" style={{ height: 1.5, background: "rgba(255,255,255,0.55)", borderRadius: 2 }} aria-hidden="true" />
                               <span style={{ fontFamily: F.disp, fontSize: 19, letterSpacing: -0.3, color: "#000" }}>FINISH WORKOUT</span>
                             </button>
@@ -2550,7 +2556,7 @@ export default function BurnLabApp() {
                         <div className="grid grid-cols-3 gap-2.5 mb-4">
                           {[["PROTEIN", t.proteinG + "g", "#F0603A"], ["FAT", t.fatG + "g", "#F2B928"], ["CARBS", t.carbG + "g", "#3D9BFF"]].map((m, i) => (
                             <div key={i} className="liquid-glass bl-spring relative overflow-hidden rounded-2xl py-4 text-center active:scale-[0.97]">
-                              <div style={{ fontFamily: F.disp, fontSize: 24, color: C.text, lineHeight: 0.9, letterSpacing: -0.5 }}>{m[1]}</div>
+                              <div style={{ fontFamily: F.disp, fontSize: 24, color: C.text, lineHeight: 1.06, letterSpacing: -0.5 }}>{m[1]}</div>
                               <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 2, marginTop: 5 }}>{m[0]}</div>
                               {/* ultra-subtle macro-coded under-glow on the bottom edge */}
                               <div className="absolute left-0 right-0 bottom-0 pointer-events-none" style={{ height: 22, background: "radial-gradient(60% 100% at 50% 130%," + m[2] + "55, transparent)" }} aria-hidden="true" />
@@ -2593,7 +2599,7 @@ export default function BurnLabApp() {
                           <div className="flex items-end justify-between">
                             <div>
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>EATEN</div>
-                              <div style={{ fontFamily: F.disp, fontSize: 32, lineHeight: 0.9, letterSpacing: -0.5 }}>{fmtNum(Math.round(dayTotals.kcal))}<span style={{ fontSize: 13, color: C.dim }}> kcal</span></div>
+                              <div style={{ fontFamily: F.disp, fontSize: 32, lineHeight: 1.06, letterSpacing: -0.5 }}>{fmtNum(Math.round(dayTotals.kcal))}<span style={{ fontSize: 13, color: C.dim }}> kcal</span></div>
                             </div>
                             <div className="text-right">
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>REMAINING</div>
@@ -2602,7 +2608,7 @@ export default function BurnLabApp() {
                           </div>
                           {/* dual-layer glass pipe: translucent track + glowing orange liquid fill */}
                           <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.6)" }}>
-                            <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: "linear-gradient(to right,#ff6b3d,#ff5722)", boxShadow: "0 0 12px " + A.a + "cc, inset 0 1px 1px rgba(255,255,255,0.4)" }} />
+                            <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: AG, boxShadow: "0 0 12px " + A.a + "cc, inset 0 1px 1px rgba(255,255,255,0.4)" }} />
                           </div>
                           <div className="grid grid-cols-3 gap-3 mt-4">
                             {[["PROTEIN", dayTotals.p, t.proteinG, "#F0603A"], ["CARBS", dayTotals.c, t.carbG, "#3D9BFF"], ["FAT", dayTotals.f, t.fatG, "#F2B928"]].map(([l, v, tg, col]) => (
@@ -3450,7 +3456,7 @@ export default function BurnLabApp() {
                   if (t.fab) return (
                     <button key="fab" onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(true); }} aria-label="Quick actions" aria-expanded={fabOpen}
                       className="bl-fabglow bl-spring flex items-center justify-center rounded-full active:scale-[0.92]"
-                      style={{ width: 58, height: 58, marginTop: -26, background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", border: "3px solid rgba(0,0,0,0.6)" }}>
+                      style={{ width: 58, height: 58, marginTop: -26, background: AGV, border: "3px solid rgba(0,0,0,0.6)", "--fab-glow-weak": A.a + "60", "--fab-glow-strong": A.a + "a6" }}>
                       <Plus size={27} color="#000" strokeWidth={2.8} />
                     </button>
                   );
@@ -3459,7 +3465,7 @@ export default function BurnLabApp() {
                   return (
                     <button key={t.id} onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab(t.id); setOverlay(null); }} aria-label={t.label} aria-current={active ? "page" : undefined}
                       className="bl-spring flex flex-col items-center justify-center rounded-full active:scale-90"
-                      style={{ width: 46, height: 46, background: active ? "linear-gradient(to bottom,#ff6b3d,#ff5722)" : "transparent", boxShadow: active ? "0 0 16px rgba(255,87,34,0.4)" : "none", opacity: active ? 1 : 0.45 }}>
+                      style={{ width: 46, height: 46, background: active ? AGV : "transparent", boxShadow: active ? "0 0 16px " + A.a + "66" : "none", opacity: active ? 1 : 0.45 }}>
                       <Icon size={20} color={active ? "#000" : C.dim} strokeWidth={active ? 2.6 : 2} />
                       {!active && <span style={{ fontFamily: F.mono, fontSize: 7, letterSpacing: 0.5, color: C.faint, marginTop: 1 }}>{t.label.toUpperCase()}</span>}
                     </button>
@@ -3589,6 +3595,22 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
             <GradBtn A={A} onClick={applyProfile} className="w-full py-3 rounded-xl text-sm">{saved ? "Saved - targets recalculated ✓" : "Save & recalculate targets"}</GradBtn>
           </div>
 
+          <SectionLabel>APPEARANCE</SectionLabel>
+          <div className="liquid-glass rounded-2xl p-5 mb-5">
+            <div className="text-sm font-semibold mb-3">Accent theme</div>
+            <div className="flex gap-4">
+              {Object.entries(ACCENTS).map(([k, ac]) => {
+                const on = data.settings.accent === k;
+                return (
+                  <button key={k} onClick={() => setSetting("accent", k)} aria-label={ac.name} aria-pressed={on} className="bl-spring flex flex-col items-center gap-1.5 active:scale-90">
+                    <span className="rounded-full" style={{ width: 42, height: 42, background: "linear-gradient(135deg," + ac.b + "," + ac.a + ")", border: on ? "2.5px solid #FAFAFA" : "2.5px solid transparent", boxShadow: on ? "0 0 16px " + ac.a + "88" : "none" }} />
+                    <span style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, color: on ? C.text : C.faint }}>{ac.name.toUpperCase()}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <SectionLabel>REST TIMER</SectionLabel>
           <div className="rounded-2xl px-4 py-1 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
             <Row label="Start automatically after a set"><Toggle on={data.settings.autoRest} onChange={v => setSetting("autoRest", v)} label="Auto rest timer" /></Row>
@@ -3682,7 +3704,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v6.0 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v6.1 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>

@@ -2,6 +2,21 @@
 
 Science-based workout tracker built with Vite + React + Tailwind. Installable PWA with offline support. All data (profile, workouts, trophies) lives in the browser's localStorage on your device — no backend.
 
+## What's new in v6.0 — "Liquid Glass" system
+
+- **Glassmorphism material** — reusable `.liquid-glass` / `.liquid-glass-active` utilities (frosted blur, inset highlight lip, soft shadow) across nav, cards, splits and inputs, on a pure-OLED-black canvas.
+- **Floating pill navigation** with a central gradient add-button that breathes a gentle accent glow.
+- **Progressive Focus workout** — the active set gets the glass-active treatment with obsidian input wells; other sets dim to 25% and completed sets strike through, auto-advancing the focus. Button hierarchy: Next Exercise is the primary gradient pill, Finish Workout is a quiet text-link.
+- **Nutrition** — macro cards on glass with subtle macro-coded under-glows and dual-layer glass progress pipes.
+- Springy micro-motion (`cubic-bezier(0.34,1.56,0.64,1)`) with tactile press-scale on interactive elements.
+
+## What's new in v4.0–v5.1 — design overhaul
+
+- **Cinematic Athletic direction** — custom **NIKE** display face for titles + hero numbers (Archivo for body), a signature glowing **HeroArc** gauge on the dashboard, film-grain materiality, and oversized editorial screen headers.
+- **v4.0 foundation** — motion/spacing/radius tokens, `HeroNumber` count-up component, one-exercise-at-a-time workout runner with **warm-up sets** (marked `W`, excluded from all volume/PR/heat aggregates), a flagship full-screen **Muscle Map**, and a central-FAB Quick Actions sheet.
+- **Custom brand logo** ("The Catalyst" monogram + editorial wordmark) in the header.
+- **Accent themes** — Orange (default), Blue, Green and Yellow, switchable in Settings; the whole UI recolors live.
+
 ## What's new in v3.1
 
 - **35 trophies** across four categories — training (20), nutrition (5), weigh-ins (5) and progress photos (4), plus the platinum "Burn Legend" for unlocking everything else. A category filter row sits above the tier list in the Trophies tab, and unlocking one now surfaces a toast from wherever it happens (finishing a workout, logging food, weighing in, or adding a photo), not just after a session.
@@ -71,7 +86,7 @@ Local dev: `npm install`, then `npm run dev`.
 
 ## Updating after changes
 
-Bump `CACHE` in `public/sw.js` (e.g. `burnlab-v2`) so phones with the installed app fetch the new version promptly.
+Bump `CACHE` in `public/sw.js` (currently `burnlab-v11`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
 
 ## Notes
 

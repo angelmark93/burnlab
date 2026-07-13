@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Custom brand display face */
+@font-face {
+  font-family: 'NIKE';
+  src: url('/fonts/NIKE.ttf') format('truetype');
+  font-weight: 400 900; font-style: normal; font-display: swap;
+}
+
 html, body, #root { min-height: 100%; }
 body { margin: 0; background: #000000; }
 
@@ -30,8 +37,8 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 /* Center FAB: gently breathing orange drop-glow when idle */
 .bl-fabglow { animation: blfabglow 2.8s ease-in-out infinite; }
 @keyframes blfabglow {
-  0%, 100% { box-shadow: 0 0 16px rgba(255, 87, 34, 0.38), inset 0 1px 1px rgba(255,255,255,0.35); }
-  50% { box-shadow: 0 0 30px rgba(255, 87, 34, 0.62), inset 0 1px 1px rgba(255,255,255,0.35); }
+  0%, 100% { box-shadow: 0 0 16px var(--fab-glow-weak, rgba(255, 87, 34, 0.38)), inset 0 1px 1px rgba(255,255,255,0.35); }
+  50% { box-shadow: 0 0 30px var(--fab-glow-strong, rgba(255, 87, 34, 0.62)), inset 0 1px 1px rgba(255,255,255,0.35); }
 }
 /* Completed set row: fade + delayed strike-through */
 .bl-setdone { animation: blsetdone 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
