@@ -2065,15 +2065,18 @@ export default function BurnLabApp() {
                     const trained = new Set(data.history.map(h => new Date(h.date).toDateString()));
                     const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
                     return (
-                      <div className="grid grid-cols-7 gap-1.5 mb-4">
+                      <div className="grid grid-cols-7 gap-1.5 mb-6">
                         {days.map((d, i) => {
                           const isToday = d.toDateString() === new Date().toDateString();
                           const did = trained.has(d.toDateString());
                           return (
-                            <div key={i} className="rounded-2xl py-2 text-center" style={{ background: did ? AG : C.card, border: "1px solid " + (isToday ? A.a : did ? "transparent" : C.line) }}>
-                              <div style={{ fontFamily: F.mono, fontSize: 8.5, letterSpacing: 1, color: did ? "#0D0E11" : C.faint }}>{"MTWTFSS"[i]}</div>
-                              <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 16, color: did ? "#0D0E11" : isToday ? C.text : C.dim }}>{d.getDate()}</div>
-                              {did && <Check size={10} color="#0D0E11" className="mx-auto" />}
+                            <div key={i} className="bl-spring rounded-2xl py-2.5 text-center hover:-translate-y-1"
+                              style={did
+                                ? { background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", border: "1px solid transparent", boxShadow: "0 6px 18px -6px " + A.a + "88" }
+                                : { background: "rgba(24,24,27,0.20)", border: "1px solid " + (isToday ? A.a : "transparent") }}>
+                              <div style={{ fontFamily: F.mono, fontSize: 8.5, letterSpacing: 1, color: did ? "#000" : C.faint }}>{"MTWTFSS"[i]}</div>
+                              <div style={{ fontFamily: F.disp, fontSize: 16, color: did ? "#000" : isToday ? C.text : C.dim }}>{d.getDate()}</div>
+                              {did && <Check size={10} color="#000" className="mx-auto" strokeWidth={3} />}
                             </div>
                           );
                         })}
@@ -2135,23 +2138,23 @@ export default function BurnLabApp() {
                       Trophies lives here now that it's off the 5-slot nav. */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     {[
-                      { key: "tro", label: "TROPHIES", val: troph.filter(t => t.done).length, sub: "of " + troph.length + " unlocked", icon: Trophy, color: C.yellow, go: () => setTab("trophies") },
-                      { key: "rec", label: "RECORDS", val: recentRecords.length, sub: recentRecords.length ? "new this month" : "none this month", icon: Award, color: A.a, go: () => setTab("progress") },
-                      { key: "fuel", label: "NUTRITION", val: (data.profile && data.profile.targets) ? Math.max(0, data.profile.targets.goal - eatenToday) : "—", sub: (data.profile && data.profile.targets) ? "kcal left today" : "set up in fuel", icon: Utensils, color: C.green, go: () => setTab("fuel") },
-                      { key: "hist", label: "HISTORY", val: data.history.length, sub: "workouts logged", icon: Dumbbell, color: C.blue, go: () => setTab("progress") },
+                      { key: "tro", label: "TROPHIES", val: troph.filter(t => t.done).length, sub: "of " + troph.length + " unlocked", icon: Trophy, go: () => setTab("trophies") },
+                      { key: "rec", label: "RECORDS", val: recentRecords.length, sub: recentRecords.length ? "new this month" : "none this month", icon: Award, go: () => setTab("progress") },
+                      { key: "fuel", label: "NUTRITION", val: (data.profile && data.profile.targets) ? Math.max(0, data.profile.targets.goal - eatenToday) : "—", sub: (data.profile && data.profile.targets) ? "kcal left today" : "set up in fuel", icon: Utensils, go: () => setTab("fuel") },
+                      { key: "hist", label: "HISTORY", val: data.history.length, sub: "workouts logged", icon: Dumbbell, go: () => setTab("progress") },
                     ].map((c, i) => {
                       const Icon = c.icon;
                       return (
                         <button key={c.key} onClick={() => { if (data.settings.vibrate) haptic("tap"); c.go(); }}
-                          className="bl-stagger relative overflow-hidden text-left transition-transform active:scale-[0.97]"
-                          style={{ "--i": i, background: C.card, border: "1px solid " + C.line, borderRadius: 24, padding: SPACE[5] }}>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="flex items-center justify-center rounded-full" style={{ width: 34, height: 34, background: c.color + "1F", border: "1px solid " + c.color + "3A" }}><Icon size={16} color={c.color} /></span>
-                            <ArrowUpRight size={15} color={C.faint} />
+                          className="liquid-glass bl-spring bl-stagger relative overflow-hidden text-left active:scale-[0.97] hover:scale-[1.01] hover:border-white/20"
+                          style={{ "--i": i, borderRadius: 26, padding: SPACE[6] }}>
+                          <div className="flex items-start justify-between mb-3">
+                            <span className="flex items-center justify-center rounded-full" style={{ width: 36, height: 36, background: A.a + "1A", border: "1px solid " + A.a + "33" }}><Icon size={16} color={A.a} /></span>
+                            <ArrowUpRight size={9} color={C.text} style={{ opacity: 0.2 }} />
                           </div>
-                          <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 32, lineHeight: 1 }}>{typeof c.val === "number" ? fmtNum(c.val) : c.val}</div>
-                          <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5, marginTop: 2 }}>{c.label}</div>
-                          <div className="text-xs truncate" style={{ color: C.dim }}>{c.sub}</div>
+                          <div style={{ fontFamily: F.disp, fontSize: 36, lineHeight: 0.9, letterSpacing: -0.5 }}>{typeof c.val === "number" ? fmtNum(c.val) : c.val}</div>
+                          <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 2, marginTop: 6 }}>{c.label}</div>
+                          <div className="text-xs truncate" style={{ color: C.dim, marginTop: 1 }}>{c.sub}</div>
                         </button>
                       );
                     })}
@@ -2290,20 +2293,22 @@ export default function BurnLabApp() {
                       const on = data.program === k;
                       return (
                         <button key={k} onClick={() => { if (data.settings.vibrate) haptic("tap"); save({ ...data, program: k }); }}
-                          className="rounded-2xl px-2 py-4 text-center transition-all active:scale-[0.97]"
-                          style={{ background: on ? A.a : C.card, border: "1px solid " + (on ? A.a : C.line), color: on ? "#000" : C.text }}>
-                          <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 17, lineHeight: 1, letterSpacing: -0.5 }}>{pr.name.toUpperCase()}</div>
-                          <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, marginTop: 4, color: on ? "#000" : C.faint }}>{pr.freq}</div>
+                          className={"bl-spring rounded-2xl px-2 py-4 text-center active:scale-[0.97] " + (on ? "liquid-glass-active" : "")}
+                          style={on
+                            ? { transform: "scale(1.03)", borderColor: A.a + "cc", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.22), 0 0 20px -2px " + A.a + "55" }
+                            : { background: "rgba(24,24,27,0.30)", border: "1px solid transparent" }}>
+                          <div style={{ fontFamily: F.disp, fontSize: 17, lineHeight: 1, letterSpacing: -0.5, color: on ? C.text : C.faint }}>{pr.name.toUpperCase()}</div>
+                          <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, marginTop: 4, color: on ? A.a : C.faint }}>{pr.freq}</div>
                         </button>
                       );
                     })}
                   </div>
 
                   {program ? (
-                    <>
+                    <div key={data.program} className="bl-fade">
                       <p className="text-sm mb-4" style={{ color: C.dim }}>{program.blurb}{gym !== "full" && " Exercises auto-adapt to your " + GYM_LABEL[gym].toLowerCase() + " setup."}</p>
                       {program.days.map((day, di) => (
-                        <div key={day.id} className="rounded-2xl mb-4 overflow-hidden" style={{ background: C.card, border: "1px solid " + (di === nextDayIdx ? A.a + "77" : C.line) }}>
+                        <div key={day.id} className={"bl-spring rounded-3xl mb-4 overflow-hidden " + (di === nextDayIdx ? "liquid-glass-active" : "liquid-glass")} style={di === nextDayIdx ? { borderColor: A.a + "66" } : {}}>
                           <div className="flex items-center justify-between px-4 pt-3.5">
                             <div>
                               <div className="flex items-center gap-2">
@@ -2341,7 +2346,7 @@ export default function BurnLabApp() {
                           </div>
                         </div>
                       ))}
-                    </>
+                    </div>
                   ) : (
                     <p className="text-sm" style={{ color: C.dim }}>Select a split above - you can switch any time without losing history.</p>
                   )}
@@ -2452,35 +2457,30 @@ export default function BurnLabApp() {
                               const labelNo = isW ? "W" : workingNo;
                               const prevSet = !isW && prev ? prev.sets[workingNo - 1] : null;
                               const isFocus = i === focusIdx;
-                              const cellBg = s.done ? A.a + "1F" : C.card2;
+                              const well = { fontSize: 16, height: 44, background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, color: s.done ? C.dim : C.text, fontFamily: F.mono, fontVariantNumeric: "tabular-nums" };
                               return (
-                                <div key={i} className="grid gap-1.5 items-center px-1 py-1.5 my-0.5"
-                                  style={{ gridTemplateColumns: "26px 44px 1fr 1fr 50px 40px", borderRadius: 16,
-                                    background: isFocus ? C.card2 : "transparent", opacity: isFocus || focusIdx === -1 ? 1 : 0.3,
-                                    transition: "opacity 220ms " + EASE + ", background 220ms " + EASE }}>
-                                  <span className="flex items-center justify-center rounded-full" style={{ fontFamily: isW ? F.mono : F.disp, fontWeight: 800, fontSize: isW ? 11 : 16, width: isW ? 22 : "auto", height: isW ? 22 : "auto", color: isW ? A.a : isFocus ? A.a : C.dim, background: isW ? A.a + "1A" : "transparent", border: isW ? "1px solid " + A.a + "40" : "none" }}>{labelNo}</span>
+                                <div key={i} className={"bl-spring grid gap-1.5 items-center px-2 py-2 my-1 " + (isFocus ? "liquid-glass-active " : "") + (s.done ? "bl-setdone" : "")}
+                                  style={{ gridTemplateColumns: "26px 42px 1fr 1fr 50px 42px", borderRadius: 16, opacity: (isFocus || focusIdx === -1) ? 1 : 0.25 }}>
+                                  <span className="flex items-center justify-center rounded-full" style={{ fontFamily: isW ? F.mono : F.disp, fontSize: isW ? 11 : 17, width: isW ? 22 : "auto", height: isW ? 22 : "auto", color: isW ? A.a : isFocus ? A.a : C.dim, background: isW ? A.a + "1A" : "transparent", border: isW ? "1px solid " + A.a + "40" : "none" }}>{labelNo}</span>
                                   <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, fontVariantNumeric: "tabular-nums" }}>{prevSet ? fmtKg(prevSet.w) + "×" + prevSet.r : "-"}</span>
                                   <input type="number" inputMode="decimal" value={s.w} placeholder="kg" aria-label={"Set " + labelNo + " weight"}
                                     onChange={e => updateSet(cur, i, "w", e.target.value)}
-                                    className="w-full text-center font-semibold"
-                                    style={{ fontSize: 16, height: 42, background: cellBg, border: "none", borderRadius: 999, color: C.text, fontFamily: F.mono, fontVariantNumeric: "tabular-nums" }} />
+                                    className={"w-full text-center font-semibold " + (s.done ? "bl-struck" : "")} style={well} />
                                   <input type="number" inputMode="numeric" value={s.r} placeholder={isW ? "reps" : it.lo + "-" + it.hi} aria-label={"Set " + labelNo + " reps"}
                                     onChange={e => updateSet(cur, i, "r", e.target.value)}
-                                    className="w-full text-center font-semibold"
-                                    style={{ fontSize: 16, height: 42, background: cellBg, border: "none", borderRadius: 999, color: C.text, fontFamily: F.mono, fontVariantNumeric: "tabular-nums" }} />
+                                    className={"w-full text-center font-semibold " + (s.done ? "bl-struck" : "")} style={well} />
                                   {isW ? (
                                     <span className="text-center" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>—</span>
                                   ) : (
                                     <select value={s.rpe} onChange={e => updateSet(cur, i, "rpe", parseFloat(e.target.value))} aria-label={"Set " + labelNo + " RPE"}
-                                      className="text-center"
-                                      style={{ fontSize: 15, height: 42, background: C.card2, border: "none", borderRadius: 999, color: C.dim, fontFamily: F.mono }}>
+                                      className="text-center" style={{ fontSize: 15, height: 44, background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, color: C.dim, fontFamily: F.mono }}>
                                       {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(v => <option key={v} value={v}>{v}</option>)}
                                     </select>
                                   )}
                                   <button onClick={() => toggleDone(cur, i, it.rest)} aria-label={"Mark set " + labelNo + (s.done ? " not done" : " done")}
-                                    className="flex items-center justify-center transition-transform active:scale-90"
-                                    style={{ height: 42, width: 40, borderRadius: 999, background: s.done ? A.a : C.card2, border: "none" }}>
-                                    <Check size={16} color={s.done ? "#000" : C.faint} strokeWidth={s.done ? 3 : 2} />
+                                    className="bl-spring flex items-center justify-center active:scale-90"
+                                    style={{ height: 44, width: 42, borderRadius: 12, background: s.done ? "linear-gradient(to bottom,#ff6b3d,#ff5722)" : "rgba(0,0,0,0.8)", border: s.done ? "none" : "1px solid rgba(255,255,255,0.10)", boxShadow: s.done ? "0 0 14px " + A.a + "77, inset 0 1px 1px rgba(255,255,255,0.3)" : "none" }}>
+                                    <Check size={17} color={s.done ? "#000" : C.faint} strokeWidth={s.done ? 3 : 2} />
                                   </button>
                                 </div>
                               );
@@ -2493,25 +2493,32 @@ export default function BurnLabApp() {
                           </div>
                         </div>
 
-                        {/* prev / next exercise nav */}
-                        <div className="flex items-center gap-2 mb-3">
+                        {/* button hierarchy: Next Exercise = primary gradient pill w/ highlight lip; Finish = quiet text-link */}
+                        <div className="flex items-center gap-2 mb-1">
                           <button onClick={goPrev} disabled={cur === 0} aria-label="Previous exercise"
-                            className="flex items-center justify-center gap-1 py-3 rounded-2xl font-bold text-sm transition-opacity"
-                            style={{ width: 54, background: C.card, border: "1px solid " + C.line, color: C.text, opacity: cur === 0 ? 0.35 : 1 }}><ChevronLeft size={18} /></button>
+                            className="liquid-glass bl-spring flex items-center justify-center py-3.5 rounded-2xl active:scale-95"
+                            style={{ width: 54, color: C.text, opacity: cur === 0 ? 0.35 : 1 }}><ChevronLeft size={18} color={C.text} /></button>
                           {cur < session.items.length - 1 ? (
-                            <GradBtn A={A} onClick={goNext} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-base">
-                              Next exercise <ChevronLeft size={17} style={{ transform: "rotate(180deg)" }} />
-                            </GradBtn>
+                            <button onClick={goNext} className="bl-spring relative overflow-hidden flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl active:scale-[0.98]"
+                              style={{ background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
+                              <span className="absolute left-4 right-4 top-0 pointer-events-none" style={{ height: 1.5, background: "rgba(255,255,255,0.55)", borderRadius: 2 }} aria-hidden="true" />
+                              <span style={{ fontFamily: F.disp, fontSize: 19, letterSpacing: -0.3, color: "#000" }}>NEXT EXERCISE</span>
+                              <ChevronLeft size={18} color="#000" strokeWidth={2.6} style={{ transform: "rotate(180deg)" }} />
+                            </button>
                           ) : (
-                            <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl" style={{ fontFamily: F.mono, fontSize: 11, color: C.faint, background: C.card, border: "1px solid " + C.line }}>
-                              <Check size={14} color={workDone === working.length ? C.green : C.faint} /> {workDone}/{working.length} sets done
-                            </div>
+                            <button onClick={finishSession} className="bl-spring relative overflow-hidden flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl active:scale-[0.98]"
+                              style={{ background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
+                              <span className="absolute left-4 right-4 top-0 pointer-events-none" style={{ height: 1.5, background: "rgba(255,255,255,0.55)", borderRadius: 2 }} aria-hidden="true" />
+                              <span style={{ fontFamily: F.disp, fontSize: 19, letterSpacing: -0.3, color: "#000" }}>FINISH WORKOUT</span>
+                            </button>
                           )}
                         </div>
-
-                        <GradBtn A={A} onClick={finishSession} className="w-full py-3.5 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 20, letterSpacing: 1 }}>
-                          FINISH WORKOUT
-                        </GradBtn>
+                        {cur < session.items.length - 1 && (
+                          <button onClick={finishSession} className="w-full text-center py-4 uppercase transition-colors"
+                            style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, letterSpacing: 3, color: C.faint }}>
+                            Finish workout
+                          </button>
+                        )}
                       </>
                     );
                   })()}
@@ -2540,11 +2547,13 @@ export default function BurnLabApp() {
                           <div className="flex justify-center my-0.5"><HeroNumber value={t.goal} size={46} accent={A} /></div>
                           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day · maintenance {fmtNum(t.maintain)} kcal</div>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                          {[["PROTEIN", t.proteinG + "g", C.text], ["FAT", t.fatG + "g", C.text], ["CARBS", t.carbG + "g", C.text]].map((m, i) => (
-                            <div key={i} className="rounded-xl py-3 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
-                              <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 22, color: m[2] }}>{m[1]}</div>
-                              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>{m[0]}</div>
+                        <div className="grid grid-cols-3 gap-2.5 mb-4">
+                          {[["PROTEIN", t.proteinG + "g", "#F0603A"], ["FAT", t.fatG + "g", "#F2B928"], ["CARBS", t.carbG + "g", "#3D9BFF"]].map((m, i) => (
+                            <div key={i} className="liquid-glass bl-spring relative overflow-hidden rounded-2xl py-4 text-center active:scale-[0.97]">
+                              <div style={{ fontFamily: F.disp, fontSize: 24, color: C.text, lineHeight: 0.9, letterSpacing: -0.5 }}>{m[1]}</div>
+                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 2, marginTop: 5 }}>{m[0]}</div>
+                              {/* ultra-subtle macro-coded under-glow on the bottom edge */}
+                              <div className="absolute left-0 right-0 bottom-0 pointer-events-none" style={{ height: 22, background: "radial-gradient(60% 100% at 50% 130%," + m[2] + "55, transparent)" }} aria-hidden="true" />
                             </div>
                           ))}
                         </div>
@@ -2580,29 +2589,30 @@ export default function BurnLabApp() {
                         </div>
 
                         {/* day summary */}
-                        <div className="rounded-3xl p-4 mb-3" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid #ffffff14", boxShadow: SHADOW.card }}>
+                        <div className="liquid-glass rounded-3xl p-5 mb-3">
                           <div className="flex items-end justify-between">
                             <div>
-                              <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>EATEN</div>
-                              <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 30, lineHeight: 1 }}>{fmtNum(Math.round(dayTotals.kcal))}<span style={{ fontSize: 13, color: C.dim }}> kcal</span></div>
+                              <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>EATEN</div>
+                              <div style={{ fontFamily: F.disp, fontSize: 32, lineHeight: 0.9, letterSpacing: -0.5 }}>{fmtNum(Math.round(dayTotals.kcal))}<span style={{ fontSize: 13, color: C.dim }}> kcal</span></div>
                             </div>
                             <div className="text-right">
-                              <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>REMAINING</div>
-                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} size={34} glow={false} accent={A} />
+                              <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>REMAINING</div>
+                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} size={36} glow={true} accent={A} />
                             </div>
                           </div>
-                          <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: C.card2 }}>
-                            <div className="h-full rounded-full transition-all" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: dayTotals.kcal > t.goal ? C.yellow : AG }} />
+                          {/* dual-layer glass pipe: translucent track + glowing orange liquid fill */}
+                          <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.6)" }}>
+                            <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: "linear-gradient(to right,#ff6b3d,#ff5722)", boxShadow: "0 0 12px " + A.a + "cc, inset 0 1px 1px rgba(255,255,255,0.4)" }} />
                           </div>
-                          <div className="grid grid-cols-3 gap-2 mt-3">
-                            {[["PROTEIN", dayTotals.p, t.proteinG, A.a], ["CARBS", dayTotals.c, t.carbG, A.a], ["FAT", dayTotals.f, t.fatG, A.a]].map(([l, v, tg, col]) => (
+                          <div className="grid grid-cols-3 gap-3 mt-4">
+                            {[["PROTEIN", dayTotals.p, t.proteinG, "#F0603A"], ["CARBS", dayTotals.c, t.carbG, "#3D9BFF"], ["FAT", dayTotals.f, t.fatG, "#F2B928"]].map(([l, v, tg, col]) => (
                               <div key={l}>
                                 <div className="flex items-baseline justify-between">
                                   <span style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>{l}</span>
-                                  <span style={{ fontFamily: F.mono, fontSize: 10 }}>{Math.round(v)}<span style={{ color: C.faint }}>/{tg}g</span></span>
+                                  <span style={{ fontFamily: F.mono, fontSize: 10, fontVariantNumeric: "tabular-nums" }}>{Math.round(v)}<span style={{ color: C.faint }}>/{tg}g</span></span>
                                 </div>
-                                <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
-                                  <div className="h-full rounded-full" style={{ width: Math.min(100, (v / tg) * 100) + "%", background: col }} />
+                                <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 1px rgba(0,0,0,0.6)" }}>
+                                  <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (v / tg) * 100) + "%", background: A.a, boxShadow: "0 0 8px " + col + "88" }} />
                                 </div>
                               </div>
                             ))}
@@ -3427,9 +3437,9 @@ export default function BurnLabApp() {
               );
             })()}
 
-            {/* ======= BOTTOM NAV — floating pill ======= */}
-            <nav className="fixed left-1/2 -translate-x-1/2 w-full z-10 px-5" style={{ maxWidth: 480, bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
-              <div className="flex items-center justify-between px-3 py-2 rounded-full" style={{ background: "#14161BF0", border: "1px solid " + C.line, backdropFilter: "blur(14px)", boxShadow: SHADOW.nav }}>
+            {/* ======= BOTTOM NAV — floating liquid-glass island ======= */}
+            <nav className="fixed left-1/2 -translate-x-1/2 w-full z-10 px-4" style={{ maxWidth: 448, bottom: "calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div className="liquid-glass flex items-center justify-between px-3 py-2 rounded-full" style={{ backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
                 {[
                   { id: "home", label: "Home", icon: Home },
                   { id: "train", label: "Train", icon: Dumbbell },
@@ -3439,18 +3449,18 @@ export default function BurnLabApp() {
                 ].map((t, ti) => {
                   if (t.fab) return (
                     <button key="fab" onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(true); }} aria-label="Quick actions" aria-expanded={fabOpen}
-                      className="flex items-center justify-center rounded-full transition-transform active:scale-90"
-                      style={{ width: 56, height: 56, marginTop: -24, background: AG, border: "3px solid " + C.bg, boxShadow: "0 12px 26px -6px " + A.a + "AA, " + SHADOW.glow(A.a) }}>
-                      <Plus size={26} color="#0D0E11" strokeWidth={2.8} />
+                      className="bl-fabglow bl-spring flex items-center justify-center rounded-full active:scale-[0.92]"
+                      style={{ width: 58, height: 58, marginTop: -26, background: "linear-gradient(to bottom,#ff6b3d,#ff5722)", border: "3px solid rgba(0,0,0,0.6)" }}>
+                      <Plus size={27} color="#000" strokeWidth={2.8} />
                     </button>
                   );
                   const active = tab === t.id;
                   const Icon = t.icon;
                   return (
                     <button key={t.id} onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab(t.id); setOverlay(null); }} aria-label={t.label} aria-current={active ? "page" : undefined}
-                      className="flex flex-col items-center justify-center rounded-full transition-all active:scale-90"
-                      style={{ width: 46, height: 46, background: active ? AG : "transparent", boxShadow: active ? SHADOW.glow(A.a) : "none", opacity: active ? 1 : 0.5 }}>
-                      <Icon size={20} color={active ? "#0D0E11" : C.faint} strokeWidth={active ? 2.5 : 2} />
+                      className="bl-spring flex flex-col items-center justify-center rounded-full active:scale-90"
+                      style={{ width: 46, height: 46, background: active ? "linear-gradient(to bottom,#ff6b3d,#ff5722)" : "transparent", boxShadow: active ? "0 0 16px rgba(255,87,34,0.4)" : "none", opacity: active ? 1 : 0.45 }}>
+                      <Icon size={20} color={active ? "#000" : C.dim} strokeWidth={active ? 2.6 : 2} />
                       {!active && <span style={{ fontFamily: F.mono, fontSize: 7, letterSpacing: 0.5, color: C.faint, marginTop: 1 }}>{t.label.toUpperCase()}</span>}
                     </button>
                   );
@@ -3672,7 +3682,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v5.1 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v6.0 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>
