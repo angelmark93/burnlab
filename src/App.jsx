@@ -6,7 +6,7 @@ import {
 import {
   Home, Dumbbell, Utensils, Trophy, TrendingUp, BookOpen, Settings,
   Play, Check, X, Plus, Info, Search, Award, Flame, Timer, Camera, ArrowUpRight, Weight, ScanLine,
-  ChevronDown, ChevronUp, ChevronLeft, Trash2, Lock, Repeat, HelpCircle,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Trash2, Lock, Repeat, HelpCircle, Zap, CalendarDays,
 } from "lucide-react";
 import { BurnLabLogo } from "./components/ui/BurnLabLogo";
 
@@ -1402,6 +1402,36 @@ function weighStreak(weights) {
   return streak;
 }
 
+/* ---- weight trend smoothing (EMA) + MacroFactor-style insights ---- */
+function trendSeries(weights) {
+  const sorted = [...weights].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const alpha = 0.25; let ema = null;
+  return sorted.map(w => { ema = ema == null ? w.kg : ema + alpha * (w.kg - ema); return { date: w.date, kg: w.kg, trend: Math.round(ema * 100) / 100 }; });
+}
+function weightInsights(weights) {
+  const s = trendSeries(weights);
+  if (s.length < 2) return null;
+  const now = s[s.length - 1];
+  const trendAt = (daysAgo) => { const cut = Date.now() - daysAgo * 864e5; const before = s.filter(p => new Date(p.date).getTime() <= cut); return before.length ? before[before.length - 1].trend : null; };
+  const change = (daysAgo) => { const past = trendAt(daysAgo); return past == null ? null : Math.round((now.trend - past) * 10) / 10; };
+  const spanDays = (new Date(now.date) - new Date(s[0].date)) / 864e5 || 1;
+  const totalChange = now.trend - s[0].trend;
+  const weeklyRate = Math.round((totalChange / spanDays) * 7 * 100) / 100;
+  const energy = Math.round((weeklyRate * 7700) / 7); // kcal/day surplus/deficit (~7700 kcal/kg)
+  return {
+    current: now.trend, weeklyRate, energy,
+    projection30: Math.round((now.trend + weeklyRate * (30 / 7)) * 10) / 10,
+    changes: [3, 7, 14, 30, 90].map(d => ({ d, v: change(d) })),
+  };
+}
+/* consecutive-week workout streak (weeks, current week counts if trained) */
+function weekStreak(history) {
+  const trained = new Set(history.map(h => { const d = new Date(h.date); const m = new Date(d); m.setHours(0, 0, 0, 0); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return m.toISOString().slice(0, 10); }));
+  let streak = 0; const cur = new Date(); cur.setHours(0, 0, 0, 0); cur.setDate(cur.getDate() - ((cur.getDay() + 6) % 7));
+  while (trained.has(cur.toISOString().slice(0, 10))) { streak++; cur.setDate(cur.getDate() - 7); }
+  return streak;
+}
+
 /* ---- 30-day habit heatmap card ---- */
 function Heat30({ dates, color, label, foot, sub }) {
   const cells = Array.from({ length: 30 }, (_, i) => {
@@ -1471,6 +1501,9 @@ export default function BurnLabApp() {
   const scanCtl = useRef(null);
   const [weighVal, setWeighVal] = useState("");
   const [weightRange, setWeightRange] = useState("1M");
+  const [progRange, setProgRange] = useState("1M");     // volume/sets analytics range
+  const [progMetric, setProgMetric] = useState("sets"); // 'sets' | 'volume'
+  const [calOffset, setCalOffset] = useState(0);        // months back from current for workout calendar
   const [summary, setSummary] = useState(null);
   const [trophyToast, setTrophyToast] = useState(null);
   const [swapFor, setSwapFor] = useState(null);       // item index
@@ -2736,14 +2769,14 @@ export default function BurnLabApp() {
               {tab === "progress" && (
                 <div className="bl-fade">
                   <ScreenHead eyebrow="Your trajectory" title="Progress" />
-                  <SectionLabel>BODYWEIGHT</SectionLabel>
-                  <div className="rounded-3xl p-4 mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
+                  <SectionLabel>WEIGHT TREND</SectionLabel>
+                  <div className="liquid-glass rounded-3xl p-5 mb-4">
                     {(() => {
                       const cutoff = Date.now() - W_RANGES[weightRange] * 864e5;
-                      const inRange = weights.filter(w => new Date(w.date).getTime() >= cutoff);
+                      const inRange = trendSeries(weights).filter(w => new Date(w.date).getTime() >= cutoff);
                       const avg = inRange.length ? Math.round(inRange.reduce((a, w) => a + w.kg, 0) / inRange.length * 10) / 10 : null;
-                      const diff = inRange.length >= 2 ? Math.round((inRange[inRange.length - 1].kg - inRange[0].kg) * 10) / 10 : 0;
-                      const pts = inRange.map(w => ({ d: dayLabel(w.date), v: w.kg }));
+                      const diff = inRange.length >= 2 ? Math.round((inRange[inRange.length - 1].trend - inRange[0].trend) * 10) / 10 : 0;
+                      const pts = inRange.map(w => ({ d: dayLabel(w.date), scale: w.kg, trend: w.trend }));
                       return (
                         <>
                           <div className="flex items-start justify-between">
@@ -2756,22 +2789,22 @@ export default function BurnLabApp() {
                               <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 30, lineHeight: 1, color: C.text }}>{diff > 0 ? "+" : ""}{fmtKg(diff)} <span style={{ fontSize: 14, color: C.dim }}>kg</span></div>
                             </div>
                           </div>
+                          {/* scale vs smoothed trend */}
+                          <div className="flex items-center gap-4 mt-3 mb-1">
+                            <span className="flex items-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 9, color: C.dim, letterSpacing: 1 }}><span style={{ width: 14, height: 2, background: C.faint, borderRadius: 2 }} /> SCALE</span>
+                            <span className="flex items-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 9, color: C.dim, letterSpacing: 1 }}><span style={{ width: 14, height: 3, background: A.a, borderRadius: 2, boxShadow: "0 0 6px " + A.a }} /> TREND</span>
+                          </div>
                           {pts.length >= 2 ? (
-                            <div className="mt-2 -mx-1">
-                              <ResponsiveContainer width="100%" height={150}>
-                                <AreaChart data={pts} margin={{ top: 12, right: 8, left: -22, bottom: 0 }}>
-                                  <defs>
-                                    <linearGradient id="blWeightFill" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor={C.green} stopOpacity={0.45} />
-                                      <stop offset="100%" stopColor={C.green} stopOpacity={0} />
-                                    </linearGradient>
-                                  </defs>
+                            <div className="mt-1 -mx-1">
+                              <ResponsiveContainer width="100%" height={160}>
+                                <LineChart data={pts} margin={{ top: 12, right: 8, left: -22, bottom: 0 }}>
                                   <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
                                   <XAxis dataKey="d" tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={{ stroke: C.line }} tickLine={false} minTickGap={22} />
                                   <YAxis tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
-                                  <Tooltip contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} labelStyle={{ color: C.dim }} formatter={v => [v + " kg", "weight"]} />
-                                  <Area type="monotone" dataKey="v" stroke={C.green} strokeWidth={2.5} fill="url(#blWeightFill)" dot={{ fill: C.green, r: 3.5, strokeWidth: 0 }} activeDot={{ r: 5 }} />
-                                </AreaChart>
+                                  <Tooltip contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} labelStyle={{ color: C.dim }} formatter={(v, n) => [v + " kg", n === "trend" ? "trend" : "scale"]} />
+                                  <Line type="linear" dataKey="scale" stroke={C.faint} strokeWidth={1.5} dot={{ fill: C.faint, r: 2.5, strokeWidth: 0 }} activeDot={{ r: 4 }} />
+                                  <Line type="monotone" dataKey="trend" stroke={A.a} strokeWidth={3} dot={false} activeDot={{ r: 5 }} style={{ filter: "drop-shadow(0 0 5px " + A.a + "aa)" }} />
+                                </LineChart>
                               </ResponsiveContainer>
                             </div>
                           ) : (
@@ -2791,6 +2824,113 @@ export default function BurnLabApp() {
                       );
                     })()}
                   </div>
+
+                  {(() => {
+                    const ins = weightInsights(weights);
+                    if (!ins) return null;
+                    const goal = data.profile && data.profile.goal;
+                    // desired direction of trend: cut => down good, bulk => up good, else neutral
+                    const dir = goal === "cut" ? -1 : goal === "bulk" ? 1 : 0;
+                    const rateColor = ins.weeklyRate === 0 ? C.dim : (dir === 0 ? C.text : (Math.sign(ins.weeklyRate) === dir ? C.green : C.red));
+                    const fmtRate = (v) => (v > 0 ? "+" : "") + fmtKg(Math.round(v * 100) / 100);
+                    return (
+                      <>
+                        <SectionLabel>INSIGHTS</SectionLabel>
+                        <div className="liquid-glass rounded-3xl p-5 mb-4">
+                          <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div className="rounded-2xl p-3" style={{ background: C.card2, border: "1px solid " + C.line }}>
+                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1.5 }}>CURRENT TREND</div>
+                              <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1.06 }}>{fmtKg(ins.current)}<span style={{ fontSize: 12, color: C.dim }}> kg</span></div>
+                            </div>
+                            <div className="rounded-2xl p-3" style={{ background: C.card2, border: "1px solid " + C.line }}>
+                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1.5 }}>WEEKLY RATE</div>
+                              <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1.06, color: rateColor }}>{fmtRate(ins.weeklyRate)}<span style={{ fontSize: 12, color: C.dim }}> kg/wk</span></div>
+                            </div>
+                            <div className="rounded-2xl p-3" style={{ background: C.card2, border: "1px solid " + C.line }}>
+                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1.5 }}>EST. ENERGY BALANCE</div>
+                              <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1.06, color: rateColor }}>{ins.energy > 0 ? "+" : ""}{fmtNum(ins.energy)}<span style={{ fontSize: 12, color: C.dim }}> kcal/d</span></div>
+                            </div>
+                            <div className="rounded-2xl p-3" style={{ background: C.card2, border: "1px solid " + C.line }}>
+                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1.5 }}>30-DAY PROJECTION</div>
+                              <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1.06 }}>{fmtKg(ins.projection30)}<span style={{ fontSize: 12, color: C.dim }}> kg</span></div>
+                            </div>
+                          </div>
+                          <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1.5, marginBottom: 8 }}>TREND CHANGE OVER TIME</div>
+                          <div className="rounded-2xl overflow-hidden" style={{ background: C.card2, border: "1px solid " + C.line }}>
+                            {ins.changes.map((c, i, arr) => (
+                              <div key={c.d} className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: i < arr.length - 1 ? "1px solid " + C.line : "none" }}>
+                                <span className="text-sm font-semibold" style={{ color: C.dim }}>Last {c.d} {c.d === 1 ? "day" : "days"}</span>
+                                {c.v == null ? (
+                                  <span style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>—</span>
+                                ) : (
+                                  <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 17, color: c.v === 0 ? C.dim : (dir === 0 ? C.text : (Math.sign(c.v) === dir ? C.green : C.red)) }}>{c.v > 0 ? "+" : ""}{fmtKg(c.v)} <span style={{ fontSize: 11, color: C.dim, fontWeight: 600 }}>kg</span></span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs mt-3" style={{ color: C.faint }}>Rate &amp; energy come from the smoothed trend, not day-to-day scale noise. Energy balance is an estimate (~7,700 kcal/kg).</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {data.history.length > 0 && (() => {
+                    // ---- workout calendar (month grid) + streak ----
+                    const trainedDays = new Set(data.history.map(h => new Date(h.date).toDateString()));
+                    const streak = weekStreak(data.history);
+                    const base = new Date(); base.setDate(1); base.setHours(0, 0, 0, 0); base.setMonth(base.getMonth() - calOffset);
+                    const year = base.getFullYear(), month = base.getMonth();
+                    const monthName = base.toLocaleString(undefined, { month: "long", year: "numeric" });
+                    const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday-first
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const cells = [];
+                    for (let i = 0; i < firstDow; i++) cells.push(null);
+                    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+                    const trainedThisMonth = Array.from({ length: daysInMonth }, (_, i) => i + 1).filter(d => trainedDays.has(new Date(year, month, d).toDateString())).length;
+                    const todayStr = new Date().toDateString();
+                    return (
+                      <>
+                        <SectionLabel>TRAINING CALENDAR</SectionLabel>
+                        <div className="liquid-glass rounded-3xl p-5 mb-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="rounded-full p-2" style={{ background: A.a + "22" }}><Flame size={16} color={A.a} /></div>
+                              <div>
+                                <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 22, lineHeight: 1.04 }}>{streak} <span style={{ fontSize: 13, color: C.dim }}>wk streak</span></div>
+                                <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>{trainedThisMonth} SESSIONS THIS MONTH</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => setCalOffset(o => o + 1)} aria-label="Previous month" className="rounded-full p-1.5 bl-spring" style={{ background: C.card2, border: "1px solid " + C.line }}><ChevronLeft size={16} color={C.dim} /></button>
+                              <button onClick={() => setCalOffset(o => Math.max(0, o - 1))} disabled={calOffset === 0} aria-label="Next month" className="rounded-full p-1.5 bl-spring" style={{ background: C.card2, border: "1px solid " + C.line, opacity: calOffset === 0 ? 0.35 : 1 }}><ChevronRight size={16} color={C.dim} /></button>
+                            </div>
+                          </div>
+                          <div className="text-center mb-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.dim, letterSpacing: 1.5 }}>{monthName.toUpperCase()}</div>
+                          <div className="grid grid-cols-7 gap-1.5">
+                            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                              <div key={i} className="text-center" style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint }}>{d}</div>
+                            ))}
+                            {cells.map((d, i) => {
+                              if (d == null) return <div key={i} />;
+                              const ds = new Date(year, month, d).toDateString();
+                              const trained = trainedDays.has(ds);
+                              const isToday = ds === todayStr;
+                              return (
+                                <div key={i} className="aspect-square flex items-center justify-center rounded-full"
+                                  style={{
+                                    fontFamily: F.mono, fontSize: 11, fontWeight: trained ? 700 : 500,
+                                    color: trained ? "#fff" : C.dim,
+                                    background: trained ? AGV : "transparent",
+                                    border: isToday && !trained ? "1px solid " + A.a : (trained ? "none" : "1px solid transparent"),
+                                    boxShadow: trained ? "0 0 8px " + A.a + "66" : "none",
+                                  }}>{d}</div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   <SectionLabel>HABITS</SectionLabel>
                   <div className="flex gap-3 mb-4">
@@ -2851,26 +2991,101 @@ export default function BurnLabApp() {
                         );
                       })()}
 
-                      <SectionLabel>TRAINING VOLUME · SETS PER WEEK</SectionLabel>
+                      <SectionLabel>TRAINING VOLUME</SectionLabel>
                       {(() => {
-                        const weeks = {};
-                        for (const h of data.history) {
-                          const d = new Date(h.date); const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-                          const k = monday.toISOString().slice(0, 10);
-                          weeks[k] = (weeks[k] || 0) + h.exercises.reduce((a, e) => a + e.sets.length, 0);
+                        const days = W_RANGES[progRange];
+                        const cutoff = Date.now() - days * 864e5;
+                        const hist = data.history.filter(h => new Date(h.date).getTime() >= cutoff);
+                        const isVol = progMetric === "volume";
+                        const valOf = (h) => isVol
+                          ? h.exercises.reduce((t, e) => t + e.sets.reduce((a, s) => a + s.w * s.r, 0), 0)
+                          : h.exercises.reduce((a, e) => a + e.sets.length, 0);
+                        // bucket by week for longer ranges, by session for short
+                        const byWeek = days > 45;
+                        const buckets = {};
+                        for (const h of hist) {
+                          const d = new Date(h.date);
+                          let key;
+                          if (byWeek) { const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); key = m.toISOString().slice(0, 10); }
+                          else key = new Date(h.date).toISOString().slice(0, 10);
+                          buckets[key] = (buckets[key] || 0) + valOf(h);
                         }
-                        const pts = Object.entries(weeks).sort().slice(-8).map(([k, v]) => ({ d: dayLabel(k), v }));
+                        const entries = Object.entries(buckets).sort();
+                        const pts = entries.map(([k, v]) => ({ d: dayLabel(k), v: Math.round(v) }));
+                        const total = hist.reduce((a, h) => a + valOf(h), 0);
+                        const avg = pts.length ? Math.round(total / pts.length) : 0;
+                        const unit = isVol ? "kg" : "sets";
                         return (
-                          <div className="rounded-2xl p-3 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
-                            <ResponsiveContainer width="100%" height={150}>
-                              <BarChart data={pts} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
-                                <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
-                                <XAxis dataKey="d" tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={{ stroke: C.line }} tickLine={false} />
-                                <YAxis tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} />
-                                <Tooltip cursor={{ fill: C.line + "55" }} contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} formatter={v => [v + " sets", "volume"]} />
-                                <Bar dataKey="v" fill={A.b} radius={[4, 4, 0, 0]} maxBarSize={26} />
-                              </BarChart>
-                            </ResponsiveContainer>
+                          <div className="liquid-glass rounded-3xl p-5 mb-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              {["sets", "volume"].map(m => (
+                                <button key={m} onClick={() => setProgMetric(m)} className="px-3 py-1.5 rounded-full text-xs font-bold bl-spring"
+                                  style={{ background: progMetric === m ? A.a : C.card2, color: progMetric === m ? "#fff" : C.dim, border: "1px solid " + (progMetric === m ? A.a : C.line) }}>{m === "sets" ? "SETS" : "TONNAGE"}</button>
+                              ))}
+                            </div>
+                            <div className="flex items-start justify-between mb-1">
+                              <div>
+                                <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>TOTAL</div>
+                                <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 28, lineHeight: 1.04 }}>{fmtNum(total)} <span style={{ fontSize: 13, color: C.dim }}>{unit}</span></div>
+                              </div>
+                              <div className="text-right">
+                                <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>AVG / {byWeek ? "WK" : "SESSION"}</div>
+                                <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 28, lineHeight: 1.04 }}>{fmtNum(avg)} <span style={{ fontSize: 13, color: C.dim }}>{unit}</span></div>
+                              </div>
+                            </div>
+                            {pts.length >= 1 ? (
+                              <div className="mt-2 -mx-1">
+                                <ResponsiveContainer width="100%" height={150}>
+                                  <BarChart data={pts} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                                    <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
+                                    <XAxis dataKey="d" tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={{ stroke: C.line }} tickLine={false} minTickGap={16} />
+                                    <YAxis tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} />
+                                    <Tooltip cursor={{ fill: C.line + "55" }} contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} formatter={v => [fmtNum(v) + " " + unit, byWeek ? "week" : "session"]} />
+                                    <Bar dataKey="v" fill={A.b} radius={[4, 4, 0, 0]} maxBarSize={26} />
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              </div>
+                            ) : (
+                              <p className="text-sm my-4" style={{ color: C.dim }}>No sessions in this range.</p>
+                            )}
+                            <div className="flex gap-1 mt-2">
+                              {Object.keys(W_RANGES).map(r => (
+                                <button key={r} onClick={() => setProgRange(r)} className="flex-1 py-1.5 rounded-full text-xs font-bold transition-colors"
+                                  style={{ background: progRange === r ? C.text : C.card2, color: progRange === r ? C.bg : C.dim, border: "1px solid " + (progRange === r ? C.text : C.line) }}>{r}</button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      <SectionLabel>TOP MOVEMENTS · {progRange}</SectionLabel>
+                      {(() => {
+                        const days = W_RANGES[progRange];
+                        const cutoff = Date.now() - days * 864e5;
+                        const hist = data.history.filter(h => new Date(h.date).getTime() >= cutoff);
+                        const isVol = progMetric === "volume";
+                        const agg = {};
+                        for (const h of hist) for (const e of h.exercises) {
+                          const v = isVol ? e.sets.reduce((a, s) => a + s.w * s.r, 0) : e.sets.length;
+                          agg[e.id] = (agg[e.id] || 0) + v;
+                        }
+                        const rows = Object.entries(agg).map(([id, v]) => ({ id, v: Math.round(v) })).sort((a, b) => b.v - a.v).slice(0, 5);
+                        const max = rows.length ? rows[0].v : 1;
+                        const unit = isVol ? "kg" : "sets";
+                        if (!rows.length) return <div className="rounded-2xl p-5 mb-5 text-center text-sm" style={{ background: C.card, border: "1px solid " + C.line, color: C.dim }}>No movements logged in this range.</div>;
+                        return (
+                          <div className="rounded-2xl p-4 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
+                            {rows.map((r, i) => (
+                              <div key={r.id} className={i < rows.length - 1 ? "mb-3" : ""}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-semibold truncate" style={{ maxWidth: "62%" }}>{EX[r.id] ? EX[r.id].name : r.id}</span>
+                                  <span style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{fmtNum(r.v)} {unit}</span>
+                                </div>
+                                <div className="h-2 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+                                  <div className="h-full rounded-full" style={{ width: (r.v / max) * 100 + "%", background: AG }} />
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         );
                       })()}
@@ -2893,15 +3108,37 @@ export default function BurnLabApp() {
 
                       {photoSection}
                       <SectionLabel>HISTORY</SectionLabel>
-                      {[...data.history].reverse().slice(0, 12).map((h, i) => (
-                        <div key={i} className="rounded-xl px-4 py-3 mb-2 flex items-center justify-between" style={{ background: C.card, border: "1px solid " + C.line }}>
-                          <div>
-                            <div className="font-semibold text-sm">{h.dayName}</div>
-                            <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{dayLabel(h.date)} · {h.durationMin} min · {h.exercises.reduce((a, e) => a + e.sets.length, 0)} sets</div>
-                          </div>
-                          <span style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>{fmtNum(Math.round(h.exercises.reduce((t, e) => t + e.sets.reduce((a, s) => a + s.w * s.r, 0), 0)))} kg</span>
-                        </div>
-                      ))}
+                      {(() => {
+                        const groups = [];
+                        for (const h of [...data.history].reverse()) {
+                          const d = new Date(h.date);
+                          const key = d.getFullYear() + "-" + d.getMonth();
+                          const label = d.toLocaleString(undefined, { month: "long", year: "numeric" });
+                          let g = groups.find(x => x.key === key);
+                          if (!g) { g = { key, label, items: [] }; groups.push(g); }
+                          g.items.push(h);
+                        }
+                        return groups.map(g => {
+                          const sets = g.items.reduce((a, h) => a + h.exercises.reduce((x, e) => x + e.sets.length, 0), 0);
+                          return (
+                            <div key={g.key} className="mb-4">
+                              <div className="flex items-center justify-between px-1 mb-2">
+                                <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 15, letterSpacing: 0.5 }}>{g.label.toUpperCase()}</span>
+                                <span style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1 }}>{g.items.length} {g.items.length === 1 ? "SESSION" : "SESSIONS"} · {sets} SETS</span>
+                              </div>
+                              {g.items.map((h, i) => (
+                                <div key={i} className="rounded-xl px-4 py-3 mb-2 flex items-center justify-between" style={{ background: C.card, border: "1px solid " + C.line }}>
+                                  <div>
+                                    <div className="font-semibold text-sm">{h.dayName}</div>
+                                    <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{dayLabel(h.date)} · {h.durationMin} min · {h.exercises.reduce((a, e) => a + e.sets.length, 0)} sets</div>
+                                  </div>
+                                  <span style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>{fmtNum(Math.round(h.exercises.reduce((t, e) => t + e.sets.reduce((a, s) => a + s.w * s.r, 0), 0)))} kg</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        });
+                      })()}
                     </>
                   )}
                 </div>
@@ -3704,7 +3941,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v6.1 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v6.2 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>

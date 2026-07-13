@@ -2,6 +2,14 @@
 
 Science-based workout tracker built with Vite + React + Tailwind. Installable PWA with offline support. All data (profile, workouts, trophies) lives in the browser's localStorage on your device — no backend.
 
+## What's new in v6.2 — Progress analytics
+
+- **Weight trend + insights** (MacroFactor-style) — an EMA-smoothed **trend line** drawn over the raw scale points so day-to-day noise stops lying to you, with an Insights panel: current trend weight, **weekly rate**, an estimated **energy balance** (kcal/day, ~7,700 kcal/kg), a 30-day projection, and trend change over the last 3/7/14/30/90 days. Rate/change colours are goal-aware (green when moving toward a cut/bulk goal, red when against it).
+- **Training calendar + streak** (Hevy-style) — a month grid with every trained day lit as a glowing accent pill, month navigation, a **consecutive-week streak** counter, and sessions-this-month.
+- **Volume & sets analytics** — a **SETS ↔ TONNAGE** toggle and 1W/1M/3M/6M/1Y/All range pills driving a total/average header and bar chart (auto-buckets by session on short ranges, by week on long ones), plus a **Top Movements** ranking for the selected range and metric.
+- **Grouped history** — past sessions grouped under month headers with per-month session and set counts.
+- All new aggregates respect the existing warm-up exclusion (warm-up sets never count toward volume, PRs or heat).
+
 ## What's new in v6.0 — "Liquid Glass" system
 
 - **Glassmorphism material** — reusable `.liquid-glass` / `.liquid-glass-active` utilities (frosted blur, inset highlight lip, soft shadow) across nav, cards, splits and inputs, on a pure-OLED-black canvas.
@@ -86,7 +94,7 @@ Local dev: `npm install`, then `npm run dev`.
 
 ## Updating after changes
 
-Bump `CACHE` in `public/sw.js` (currently `burnlab-v11`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
+Bump `CACHE` in `public/sw.js` (currently `burnlab-v13`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
 
 ## Notes
 
