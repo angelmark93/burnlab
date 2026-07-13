@@ -44,6 +44,12 @@ const SHADOW = {
   subtle: "0 2px 4px rgba(0,0,0,0.1)",
   lifted: "0 8px 16px rgba(0,0,0,0.3)",
 };
+/* motion + layout scales — the ad hoc paddings/radii/timings get consolidated onto these
+   as each screen is touched (v4.0). Not a big-bang refactor; a shared vocabulary to reach for. */
+const EASE = "cubic-bezier(0.22,0.9,0.3,1)";
+const DUR = { micro: 150, standard: 350, hero: 700 };
+const RADIUS = { sm: 10, md: 16, lg: 22, xl: 28, pill: 9999 };
+const SPACE = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 };
 const MUSCLES = {
   Chest: "#FF5C4A", Back: "#4D7CFF", Shoulders: "#F2B928", Biceps: "#9D6BFF",
   Triceps: "#2FBFAE", Quads: "#FF8A3D", Hamstrings: "#4DA6FF", Glutes: "#FF5C8A",
@@ -888,6 +894,50 @@ const SectionLabel = ({ children }) => (
 );
 /* Apple-Activity-style concentric rings: nested thick bands, glossy gradient,
    animated fill-in on mount, a glowing "cap" dot chasing the arc tip. */
+/* useCountUp — tick a number from its previous value up to `value` on mount/update.
+   rAF-driven, cleaned up on unmount; respects prefers-reduced-motion (snaps to target). */
+function useCountUp(value, duration = DUR.hero) {
+  const [display, setDisplay] = useState(value);
+  const fromRef = useRef(value);
+  const rafRef = useRef(null);
+  useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const to = value, from = fromRef.current;
+    if (reduce || from === to || typeof to !== "number" || typeof from !== "number") {
+      setDisplay(to); fromRef.current = to; return;
+    }
+    let start = null;
+    const step = (ts) => {
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      setDisplay(from + (to - from) * eased);
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
+      else fromRef.current = to;
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); fromRef.current = to; };
+  }, [value, duration]);
+  return display;
+}
+
+/* HeroNumber — the Dribbble "LED numeral" treatment: large tracked-out tabular mono digits with a
+   gradient fill + soft glow, counting up on mount. One reusable home for the app's headline figures.
+   Numeric values animate; pre-formatted strings (e.g. "12,340") render statically. */
+function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, glow = true, className = "", style = {} }) {
+  const A = accent || ACCENTS.ember;
+  const animated = useCountUp(value);
+  const shown = typeof value === "number" ? animated.toFixed(decimals) : value;
+  const grad = "linear-gradient(180deg," + A.b + "," + A.a + ")";
+  return (
+    <span className={"inline-flex items-baseline " + className} style={style}>
+      {prefix != null && <span style={{ fontFamily: F.brand, fontWeight: 600, fontSize: size * 0.38, color: C.dim, marginRight: 2 }}>{prefix}</span>}
+      <span style={{ fontFamily: F.mono, fontWeight: 700, fontSize: size, lineHeight: 1, letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 14px " + A.a + "66)" : "none" }}>{shown}</span>
+      {suffix != null && <span style={{ fontFamily: F.brand, fontWeight: 600, fontSize: size * 0.38, color: C.dim, marginLeft: 3, paddingBottom: size * 0.09 }}>{suffix}</span>}
+    </span>
+  );
+}
+
 function ActivityRings({ rings, size = 176 }) {
   const [animate, setAnimate] = useState(false);
   useEffect(() => { const t = setTimeout(() => setAnimate(true), 100); return () => clearTimeout(t); }, []);
@@ -1130,7 +1180,7 @@ function Onboarding({ A, onDone }) {
           <H kicker="YOUR NUMBERS" title={"Locked in, " + (p.name.trim() || "Athlete")} sub="Calculated with the Mifflin-St Jeor equation from what you told us. Fine-tune any of this later in Settings." />
           <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid " + A.a + "44", boxShadow: SHADOW.card }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>DAILY TARGET - {(GOAL_LABEL[p.goal] || "").toUpperCase()}</div>
-            <div className="bl-shimmer" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 44, backgroundImage: "linear-gradient(90deg," + A.a + "," + A.b + ",#F2F0EA," + A.a + ")" }}>{fmtNum(targets.goal)}</div>
+            <div className="flex justify-center my-0.5"><HeroNumber value={targets.goal} size={48} accent={A} /></div>
             <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day &nbsp;·&nbsp; maintenance {fmtNum(targets.maintain)} kcal</div>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-3">
@@ -1303,9 +1353,10 @@ function Heat30({ dates, color, label, foot, sub }) {
 function LivingBackground({ A }) {
   return (
     <div className="bl-livebg" aria-hidden="true">
-      <div className="bl-orb" style={{ width: 360, height: 360, background: A.a, top: -140, left: -100, opacity: 0.16, filter: "blur(70px)" }} />
-      <div className="bl-orb bl-orb2" style={{ width: 320, height: 320, background: A.b, top: "34%", right: -160, opacity: 0.13, filter: "blur(72px)" }} />
-      <div className="bl-orb bl-orb3" style={{ width: 280, height: 280, background: A.a, bottom: -120, left: "18%", opacity: 0.10, filter: "blur(64px)" }} />
+      <div className="bl-orb" style={{ width: 380, height: 380, background: A.a, top: -150, left: -110, opacity: 0.22, filter: "blur(76px)" }} />
+      <div className="bl-orb bl-orb2" style={{ width: 340, height: 340, background: A.b, top: "34%", right: -170, opacity: 0.18, filter: "blur(80px)" }} />
+      <div className="bl-orb bl-orb3" style={{ width: 300, height: 300, background: A.a, bottom: -130, left: "16%", opacity: 0.14, filter: "blur(70px)" }} />
+      <div className="bl-orb bl-orb2" style={{ width: 200, height: 200, background: A.b, top: "62%", left: -90, opacity: 0.10, filter: "blur(60px)" }} />
     </div>
   );
 }
@@ -1317,6 +1368,7 @@ export default function BurnLabApp() {
   const [loaded, setLoaded] = useState(false);
   const [splash, setSplash] = useState("in");         // 'in' | 'out' | null
   const [session, setSession] = useState(null);
+  const [fabOpen, setFabOpen] = useState(false);      // central-FAB shortcuts sheet
   const [openIdx, setOpenIdx] = useState(null);
   const [detail, setDetail] = useState(null);
   const [rest, setRest] = useState(null);          // { end: ms timestamp, total: seconds } | null
@@ -1765,7 +1817,16 @@ export default function BurnLabApp() {
   };
 
   const addSet = idx => setSession(s => ({
-    ...s, entries: s.entries.map((arr, j) => j === idx ? [...arr, { ...arr[arr.length - 1], done: false }] : arr),
+    ...s, entries: s.entries.map((arr, j) => j === idx ? [...arr, { ...(arr[arr.length - 1] || { rpe: 7 }), done: false, warmup: false }] : arr),
+  }));
+  /* warm-up sets sit at the top of an exercise, are marked W in the table, and are dropped at
+     finishSession so they never enter history — every volume/PR/heat aggregate reads history, so
+     this single exclusion keeps warm-ups out of all of them. */
+  const addWarmup = idx => setSession(s => ({
+    ...s, entries: s.entries.map((arr, j) => j === idx ? [{ w: "", r: "", rpe: (arr[0] && arr[0].rpe) || 6, done: false, warmup: true }, ...arr] : arr),
+  }));
+  const removeSet = (idx, i) => setSession(s => ({
+    ...s, entries: s.entries.map((arr, j) => j === idx ? (arr.length > 1 ? arr.filter((_, k) => k !== i) : arr) : arr),
   }));
 
   const swapExercise = (idx, newId) => {
@@ -1784,7 +1845,7 @@ export default function BurnLabApp() {
   const finishSession = () => {
     const exercises = session.items.map((it, i) => ({
       id: it.ex,
-      sets: session.entries[i].filter(s => s.done).map(s => ({ w: parseFloat(s.w) || 0, r: parseInt(s.r) || 0, rpe: s.rpe })),
+      sets: session.entries[i].filter(s => s.done && !s.warmup).map(s => ({ w: parseFloat(s.w) || 0, r: parseInt(s.r) || 0, rpe: s.rpe })),
     })).filter(e => e.sets.length);
     if (!exercises.length) { setSession(null); clearRest(); return; }
     const before = troph.filter(t => t.done).map(t => t.id);
@@ -1930,8 +1991,7 @@ export default function BurnLabApp() {
                             <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{workoutsThisWeek}/{goalSessions} SESSIONS</span>
                           </div>
                           <div className="flex items-end gap-1 mt-1">
-                            <span className="bl-shimmer" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 56, lineHeight: 1, backgroundImage: SHIMMER }}>{pct}</span>
-                            <span style={{ fontFamily: F.brand, fontWeight: 600, fontSize: 22, color: C.dim, paddingBottom: 5 }}>%</span>
+                            <HeroNumber value={pct} suffix="%" size={60} accent={A} />
                           </div>
                           <div className="flex gap-1 mt-3" aria-hidden="true">
                             {Array.from({ length: SEGS }, (_, i) => (
@@ -2024,17 +2084,49 @@ export default function BurnLabApp() {
                     </div>
                   )}
 
-                  {/* recent records - quick look only; full breakdown lives in Progress */}
-                  {recentRecords.length > 0 && (() => {
-                    const top = [...recentRecords].sort((a, b) => b.rm - a.rm)[0];
+                  {/* dashboard card grid — tappable destinations (Nippard-style), each driving into detail.
+                      Trophies lives here now that it's off the 5-slot nav. */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {[
+                      { key: "tro", label: "TROPHIES", val: troph.filter(t => t.done).length, sub: "of " + troph.length + " unlocked", icon: Trophy, color: C.yellow, go: () => setTab("trophies") },
+                      { key: "rec", label: "RECORDS", val: recentRecords.length, sub: recentRecords.length ? "new this month" : "none this month", icon: Award, color: A.a, go: () => setTab("progress") },
+                      { key: "fuel", label: "NUTRITION", val: (data.profile && data.profile.targets) ? Math.max(0, data.profile.targets.goal - eatenToday) : "—", sub: (data.profile && data.profile.targets) ? "kcal left today" : "set up in fuel", icon: Utensils, color: C.green, go: () => setTab("fuel") },
+                      { key: "hist", label: "HISTORY", val: data.history.length, sub: "workouts logged", icon: Dumbbell, color: C.blue, go: () => setTab("progress") },
+                    ].map((c, i) => {
+                      const Icon = c.icon;
+                      return (
+                        <button key={c.key} onClick={() => { if (data.settings.vibrate) haptic("tap"); c.go(); }}
+                          className="bl-stagger relative overflow-hidden text-left transition-transform active:scale-[0.97]"
+                          style={{ "--i": i, background: C.card, border: "1px solid " + C.line, borderRadius: RADIUS.lg, padding: SPACE[4], boxShadow: SHADOW.card }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="flex items-center justify-center rounded-full" style={{ width: 34, height: 34, background: c.color + "1F", border: "1px solid " + c.color + "3A" }}><Icon size={16} color={c.color} /></span>
+                            <ArrowUpRight size={15} color={C.faint} />
+                          </div>
+                          <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 32, lineHeight: 1 }}>{typeof c.val === "number" ? fmtNum(c.val) : c.val}</div>
+                          <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5, marginTop: 2 }}>{c.label}</div>
+                          <div className="text-xs truncate" style={{ color: C.dim }}>{c.sub}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* muscle-map banner — opens the flagship full-screen body diagram */}
+                  {(() => {
+                    const hot = Object.entries(heatMap).filter(([, v]) => v.ratio > 1.1).length;
+                    const dormant = Object.entries(heatMap).filter(([, v]) => v.daysSince === Infinity || v.daysSince > 10).length;
                     return (
-                      <button onClick={() => setTab("progress")} className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 mb-4 text-left transition-transform active:scale-[0.98]" style={{ background: C.card, border: "1px solid " + C.line }}>
-                        <Award size={16} color={C.yellow} className="shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5 }}>RECENT RECORD</span>
-                          <div className="text-sm truncate"><b>{EX[top.id] ? EX[top.id].name : top.id}</b> <span style={{ color: C.dim }}>· {Math.round(top.rm)} kg e1RM</span></div>
+                      <button onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab("muscles"); }}
+                        className="w-full relative overflow-hidden text-left transition-transform active:scale-[0.98] mb-4"
+                        style={{ background: "linear-gradient(135deg,#1B1E24,#111318)", border: "1px solid " + C.line, borderRadius: RADIUS.xl, padding: SPACE[5], boxShadow: SHADOW.card }}>
+                        <div className="bl-orb bl-orb2" style={{ width: 120, height: 120, background: A.a, top: -40, right: -20, opacity: 0.22 }} aria-hidden="true" />
+                        <div className="relative flex items-center justify-between gap-3">
+                          <div>
+                            <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>MUSCLE MAP</div>
+                            <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 26, textTransform: "uppercase", lineHeight: 1.05 }}>What's fired up</div>
+                            <div className="text-xs mt-1" style={{ color: C.dim }}>{hot} firing hot · {dormant} dormant · tap to inspect</div>
+                          </div>
+                          <div className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 46, height: 46, background: A.a + "1F", border: "1px solid " + A.a + "44" }}><ArrowUpRight size={20} color={A.a} /></div>
                         </div>
-                        <ChevronLeft size={14} color={C.faint} style={{ transform: "rotate(180deg)" }} className="shrink-0" />
                       </button>
                     );
                   })()}
@@ -2047,21 +2139,6 @@ export default function BurnLabApp() {
                       { label: "Muscles", color: C.blue, value: weekAgg.muscles, target: weekAgg.musclesT },
                       { label: "Exercises", color: "#5CE0D8", value: weekAgg.exs, target: weekAgg.exsT },
                     ]} />
-                  </div>
-
-                  {/* stats */}
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    {[
-                      { label: "THIS WEEK", val: workoutsThisWeek, unit: "sessions", icon: <Flame size={13} color={A.a} /> },
-                      { label: "ALL TIME", val: data.history.length, unit: "workouts", icon: <Dumbbell size={13} color={C.blue} /> },
-                      { label: "TROPHIES", val: troph.filter(t => t.done).length + "/" + troph.length, unit: "unlocked", icon: <Trophy size={13} color={C.yellow} /> },
-                    ].map((s, i) => (
-                      <div key={i} className="rounded-xl p-3 bl-stagger" style={{ background: C.card, border: "1px solid " + C.line, "--i": i }}>
-                        <div className="flex items-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>{s.icon}{s.label}</div>
-                        <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1.2 }}>{s.val}</div>
-                        <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.dim }}>{s.unit}</div>
-                      </div>
-                    ))}
                   </div>
 
                   {/* muscle grid: top-3 "in focus" by default, full Upper/Lower grouping on Show All */}
@@ -2104,6 +2181,58 @@ export default function BurnLabApp() {
                       <p className="text-sm mt-1">{scienceTip}</p>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* ================= MUSCLE MAP (flagship) ================= */}
+              {tab === "muscles" && (
+                <div className="bl-fade">
+                  <div className="flex items-center gap-2 mb-1">
+                    <button onClick={() => setTab("home")} aria-label="Back to home" className="p-2 rounded-full" style={{ background: C.card, border: "1px solid " + C.line }}><ChevronLeft size={18} color={C.dim} /></button>
+                    <div>
+                      <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>RECOVERY & LOAD</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 30, textTransform: "uppercase", lineHeight: 1 }}>Muscle Map</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl p-5 mt-4 mb-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg,#1A1D23,#0F1115)", border: "1px solid " + C.line, borderTop: "1px solid #ffffff14", boxShadow: SHADOW.hero }}>
+                    <div className="bl-orb" style={{ width: 200, height: 200, background: A.a, top: -80, left: "50%", marginLeft: -100, opacity: 0.14 }} aria-hidden="true" />
+                    <div className="relative">
+                      <AnatomyBody fem={data.profile && data.profile.sex === "f"} mode="heat" heatMap={heatMap} size={260} />
+                      <div className="flex items-center justify-center gap-2 mt-4">
+                        <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>DORMANT</span>
+                        <div className="h-2 rounded-full" style={{ width: 160, background: "linear-gradient(90deg,#3A4050,#FF3B30,#FFE38A)" }} />
+                        <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>FIRED UP</span>
+                      </div>
+                      <p className="text-xs text-center mt-2" style={{ color: C.faint }}>Tap a muscle - colour blends cold to hot from recent training load vs your weekly target.</p>
+                    </div>
+                  </div>
+
+                  {/* ranked breakdown — Nippard "set levels" style list */}
+                  <SectionLabel>THIS WEEK BY MUSCLE</SectionLabel>
+                  <div className="rounded-2xl overflow-hidden mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
+                    {Object.keys(MUSCLES)
+                      .map(m => ({ m, ...heatMap[m], sets: Math.round(week[m] || 0), target: muscleTarget(m) }))
+                      .sort((a, b) => b.ratio - a.ratio)
+                      .map((r, i, arr) => {
+                        const col = heatColor(r.ratio || 0, MUSCLES[r.m]);
+                        const state = r.daysSince === Infinity ? "Never trained" : r.ratio > 1.1 ? "Fired up" : r.ratio > 0.5 ? "Working" : r.daysSince > 10 ? "Dormant" : "Recovering";
+                        return (
+                          <div key={r.m} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: i ? "1px solid " + C.line : "none" }}>
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: col, boxShadow: "0 0 8px " + col + "aa" }} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm">{r.m}{focusMuscles.includes(r.m) && <span className="ml-1" aria-label="Focus muscle">🎯</span>}</div>
+                              <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{state}{r.daysSince !== Infinity ? " · " + Math.round(r.daysSince) + "d ago" : ""}</div>
+                            </div>
+                            <span style={{ fontFamily: F.mono, fontSize: 12, color: C.dim }}>{r.sets}<span style={{ color: C.faint }}>/{r.target}</span></span>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  <button onClick={() => setOverlay("settings")} className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold mb-2" style={{ background: C.card, border: "1px solid " + C.line, color: C.dim }}>
+                    <Info size={14} /> Set your focus muscles in Settings
+                  </button>
                 </div>
               )}
 
@@ -2175,8 +2304,8 @@ export default function BurnLabApp() {
               {tab === "train" && session && (
                 <div className="bl-fade">
                   {(() => {
-                    const totalSets = session.entries.reduce((a, arr) => a + arr.length, 0);
-                    const doneSets = session.entries.reduce((a, arr) => a + arr.filter(s => s.done).length, 0);
+                    const totalSets = session.entries.reduce((a, arr) => a + arr.filter(s => !s.warmup).length, 0);
+                    const doneSets = session.entries.reduce((a, arr) => a + arr.filter(s => !s.warmup && s.done).length, 0);
                     return (
                       <div className="mb-4">
                         <div className="flex items-center justify-between">
@@ -2201,89 +2330,137 @@ export default function BurnLabApp() {
                     );
                   })()}
 
-                  {session.items.map((it, idx) => {
+                  {/* one-exercise-at-a-time runner. openIdx is the current exercise pointer (0-based). */}
+                  {(() => {
+                    const cur = Math.min(Math.max(0, openIdx || 0), session.items.length - 1);
+                    const it = session.items[cur];
                     const ex = EX[it.ex];
-                    const sets = session.entries[idx];
-                    const doneCount = sets.filter(s => s.done).length;
-                    const open = openIdx === idx;
+                    const sets = session.entries[cur];
+                    const working = sets.filter(s => !s.warmup);
+                    const workDone = working.filter(s => s.done).length;
                     const sug = suggest(data.history, it);
                     const prev = lastPerf(data.history, it.ex);
-                    const heaviest = Math.max(0, ...sets.map(s => parseFloat(s.w) || 0));
+                    const heaviest = Math.max(0, ...working.map(s => parseFloat(s.w) || 0));
+                    const goPrev = () => { if (data.settings.vibrate) haptic("tap"); setOpenIdx(Math.max(0, cur - 1)); };
+                    const goNext = () => { if (data.settings.vibrate) haptic("tap"); setOpenIdx(Math.min(session.items.length - 1, cur + 1)); };
+                    let workingNo = 0;
                     return (
-                      <div key={idx} className="rounded-2xl mb-3 overflow-hidden" style={{ background: C.card, border: "1px solid " + (doneCount === sets.length ? C.green + "66" : C.line) }}>
-                        <div className="w-full flex items-center justify-between px-3 py-2.5">
-                          <button onClick={() => setOpenIdx(open ? null : idx)} className="flex items-center gap-2.5 text-left min-w-0 flex-1">
-                            <Picto ex={ex} size={40} />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <div className="font-semibold text-sm truncate">{ex.name}</div>
-                                {it.focus && <Chip color={A.a}>🎯</Chip>}
-                              </div>
-                              <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{it.sets} × {it.lo}-{it.hi} @ RPE {it.rpe} · rest {Math.round(it.rest / 60)}m</div>
-                            </div>
-                          </button>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button onClick={() => setDetail(ex)} aria-label={"How to do " + ex.name} className="p-1.5 rounded-lg" style={{ background: C.card2 }}><Info size={13} color={C.faint} /></button>
-                            <button onClick={() => setSwapFor(idx)} aria-label={"Swap " + ex.name} className="p-1.5 rounded-lg" style={{ background: C.card2 }}><Repeat size={13} color={C.faint} /></button>
-                            <button onClick={() => setOpenIdx(open ? null : idx)} className="flex items-center gap-1 p-1.5" aria-label="Expand">
-                              <span style={{ fontFamily: F.mono, fontSize: 11, color: doneCount === sets.length ? C.green : C.dim }}>{doneCount}/{sets.length}</span>
-                              {open ? <ChevronUp size={15} color={C.dim} /> : <ChevronDown size={15} color={C.dim} />}
-                            </button>
-                          </div>
+                      <>
+                        {/* exercise overview strip — tap any dot to jump back/forward */}
+                        <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
+                          {session.items.map((x, xi) => {
+                            const done = session.entries[xi].filter(s => !s.warmup).every(s => s.done) && session.entries[xi].some(s => !s.warmup);
+                            const active = xi === cur;
+                            return (
+                              <button key={xi} onClick={() => setOpenIdx(xi)} aria-label={"Go to exercise " + (xi + 1) + ": " + EX[x.ex].name} aria-current={active ? "true" : undefined}
+                                className="shrink-0 flex items-center justify-center transition-all"
+                                style={{ minWidth: active ? 34 : 26, height: 26, borderRadius: RADIUS.pill, padding: active ? "0 10px" : 0,
+                                  background: active ? AG : done ? C.green + "22" : C.card2, border: "1px solid " + (active ? "transparent" : done ? C.green + "55" : C.line) }}>
+                                {done && !active ? <Check size={12} color={C.green} /> : <span style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: active ? "#0D0E11" : C.dim }}>{xi + 1}</span>}
+                              </button>
+                            );
+                          })}
                         </div>
 
-                        {open && (
-                          <div className="px-4 pb-4" style={{ borderTop: "1px solid " + C.line }}>
+                        <div className="rounded-3xl overflow-hidden mb-4 bl-fade" style={{ background: C.card, border: "1px solid " + C.line, boxShadow: SHADOW.card }}>
+                          {/* exercise header */}
+                          <div className="p-5" style={{ background: "radial-gradient(120% 130% at 90% -20%," + A.a + "22, transparent 55%)" }}>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>EXERCISE {cur + 1} / {session.items.length}{it.focus ? " · 🎯 FOCUS" : ""}</div>
+                                <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 30, lineHeight: 1.05, textTransform: "uppercase" }}>{ex.name}</div>
+                                <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim, marginTop: 2 }}>{it.sets} × {it.lo}-{it.hi} @ RPE {it.rpe} · rest {Math.round(it.rest / 60)}m</div>
+                              </div>
+                              <Picto ex={ex} size={52} />
+                            </div>
+                            {/* action chips */}
+                            <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
+                              <button onClick={() => setDetail(ex)} className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold" style={{ background: C.card2, border: "1px solid " + C.line, color: C.text }}><Info size={13} color={C.dim} /> Info</button>
+                              <button onClick={() => { if (data.settings.vibrate) haptic("tap"); addWarmup(cur); }} className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold" style={{ background: C.yellow + "18", border: "1px solid " + C.yellow + "44", color: C.yellow }}><Flame size={13} /> Warm-up</button>
+                              <button onClick={() => setSwapFor(cur)} className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold" style={{ background: C.card2, border: "1px solid " + C.line, color: C.text }}><Repeat size={13} color={C.dim} /> Swap</button>
+                            </div>
                             {sug && (
-                              <div className="mt-3 mb-1 flex items-center gap-2">
-                                <TrendingUp size={13} color={C.yellow} />
+                              <div className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: C.yellow + "12", border: "1px solid " + C.yellow + "30" }}>
+                                <TrendingUp size={13} color={C.yellow} className="shrink-0" />
                                 <span style={{ fontFamily: F.mono, fontSize: 11, color: C.yellow }}>
-                                  {sug.mode === "load" ? "Progress: load up to " + fmtKg(sug.w) + " kg × " + sug.r : "Progress: beat last time - " + fmtKg(sug.w) + " kg × " + sug.r}
+                                  {sug.mode === "load" ? "Target: load up to " + fmtKg(sug.w) + " kg × " + sug.r : "Target: beat last time - " + fmtKg(sug.w) + " kg × " + sug.r}
                                 </span>
                               </div>
                             )}
-                            <div className="grid gap-1.5 items-center mt-2 mb-1" style={{ gridTemplateColumns: "22px 50px 1fr 1fr 56px 34px", fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>
+                          </div>
+
+                          {/* set table */}
+                          <div className="px-4 pb-4" style={{ borderTop: "1px solid " + C.line }}>
+                            <div className="grid gap-1.5 items-center mt-3 mb-1" style={{ gridTemplateColumns: "26px 46px 1fr 1fr 52px 32px", fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>
                               <span>SET</span><span>PREV</span><span className="text-center">KG</span><span className="text-center">REPS</span>
                               <button onClick={() => setRpeHelp(true)} className="flex items-center justify-center gap-0.5" aria-label="What is RPE?" style={{ color: C.faint }}>RPE<HelpCircle size={10} /></button><span />
                             </div>
                             {sets.map((s, i) => {
-                              const prevSet = prev ? prev.sets[i] : null;
+                              const isW = !!s.warmup;
+                              if (!isW) workingNo++;
+                              const labelNo = isW ? "W" : workingNo;
+                              const prevSet = !isW && prev ? prev.sets[workingNo - 1] : null;
+                              const doneBg = s.done ? (isW ? C.yellow + "18" : C.green + "18") : C.card2;
+                              const doneBd = s.done ? (isW ? C.yellow + "55" : C.green + "55") : C.line;
                               return (
-                                <div key={i} className="grid gap-1.5 items-center py-1" style={{ gridTemplateColumns: "22px 50px 1fr 1fr 56px 34px" }}>
-                                  <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 16, color: C.dim }}>{i + 1}</span>
+                                <div key={i} className="grid gap-1.5 items-center py-1" style={{ gridTemplateColumns: "26px 46px 1fr 1fr 52px 32px" }}>
+                                  <span className="flex items-center justify-center rounded" style={{ fontFamily: isW ? F.mono : F.disp, fontWeight: 800, fontSize: isW ? 11 : 16, height: isW ? 20 : "auto", color: isW ? C.yellow : C.dim, background: isW ? C.yellow + "1A" : "transparent", border: isW ? "1px solid " + C.yellow + "40" : "none" }}>{labelNo}</span>
                                   <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{prevSet ? fmtKg(prevSet.w) + "×" + prevSet.r : "-"}</span>
-                                  <input type="number" inputMode="decimal" value={s.w} placeholder="kg" aria-label={"Set " + (i + 1) + " weight"}
-                                    onChange={e => updateSet(idx, i, "w", e.target.value)}
+                                  <input type="number" inputMode="decimal" value={s.w} placeholder="kg" aria-label={"Set " + labelNo + " weight"}
+                                    onChange={e => updateSet(cur, i, "w", e.target.value)}
                                     className="w-full rounded-lg px-1 py-1.5 text-center font-semibold"
-                                    style={{ fontSize: 16, background: s.done ? C.green + "18" : C.card2, border: "1px solid " + (s.done ? C.green + "55" : C.line), color: C.text, fontFamily: F.mono }} />
-                                  <input type="number" inputMode="numeric" value={s.r} placeholder={it.lo + "-" + it.hi} aria-label={"Set " + (i + 1) + " reps"}
-                                    onChange={e => updateSet(idx, i, "r", e.target.value)}
+                                    style={{ fontSize: 16, background: doneBg, border: "1px solid " + doneBd, color: C.text, fontFamily: F.mono }} />
+                                  <input type="number" inputMode="numeric" value={s.r} placeholder={isW ? "reps" : it.lo + "-" + it.hi} aria-label={"Set " + labelNo + " reps"}
+                                    onChange={e => updateSet(cur, i, "r", e.target.value)}
                                     className="w-full rounded-lg px-1 py-1.5 text-center font-semibold"
-                                    style={{ fontSize: 16, background: s.done ? C.green + "18" : C.card2, border: "1px solid " + (s.done ? C.green + "55" : C.line), color: C.text, fontFamily: F.mono }} />
-                                  <select value={s.rpe} onChange={e => updateSet(idx, i, "rpe", parseFloat(e.target.value))} aria-label={"Set " + (i + 1) + " RPE"}
-                                    className="rounded-lg py-1.5 text-center"
-                                    style={{ fontSize: 16, background: C.card2, border: "1px solid " + C.line, color: C.dim, fontFamily: F.mono }}>
-                                    {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(v => <option key={v} value={v}>{v}</option>)}
-                                  </select>
-                                  <button onClick={() => toggleDone(idx, i, it.rest)} aria-label={"Mark set " + (i + 1) + (s.done ? " not done" : " done")}
+                                    style={{ fontSize: 16, background: doneBg, border: "1px solid " + doneBd, color: C.text, fontFamily: F.mono }} />
+                                  {isW ? (
+                                    <span className="text-center" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>—</span>
+                                  ) : (
+                                    <select value={s.rpe} onChange={e => updateSet(cur, i, "rpe", parseFloat(e.target.value))} aria-label={"Set " + labelNo + " RPE"}
+                                      className="rounded-lg py-1.5 text-center"
+                                      style={{ fontSize: 16, background: C.card2, border: "1px solid " + C.line, color: C.dim, fontFamily: F.mono }}>
+                                      {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(v => <option key={v} value={v}>{v}</option>)}
+                                    </select>
+                                  )}
+                                  <button onClick={() => toggleDone(cur, i, it.rest)} aria-label={"Mark set " + labelNo + (s.done ? " not done" : " done")}
                                     className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
-                                    style={{ background: s.done ? C.green : C.card2, border: "1px solid " + (s.done ? C.green : C.line) }}>
+                                    style={{ background: s.done ? (isW ? C.yellow : C.green) : C.card2, border: "1px solid " + (s.done ? (isW ? C.yellow : C.green) : C.line) }}>
                                     <Check size={15} color={s.done ? "#fff" : C.faint} />
                                   </button>
                                 </div>
                               );
                             })}
-                            <button onClick={() => addSet(idx)} className="mt-2 flex items-center gap-1 text-xs font-semibold" style={{ color: C.dim }}><Plus size={13} /> Add set</button>
+                            <div className="flex items-center gap-4 mt-2">
+                              <button onClick={() => addSet(cur)} className="flex items-center gap-1 text-xs font-semibold" style={{ color: C.dim }}><Plus size={13} /> Add set</button>
+                              {sets.length > 1 && <button onClick={() => removeSet(cur, sets.length - 1)} className="flex items-center gap-1 text-xs font-semibold" style={{ color: C.faint }}><Trash2 size={12} /> Remove last</button>}
+                            </div>
                             {ex.barbell && data.settings.plates && heaviest >= 20 && <PlateBar weight={heaviest} />}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        </div>
 
-                  <GradBtn A={A} onClick={finishSession} className="w-full mt-2 py-3.5 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 20, letterSpacing: 1 }}>
-                    FINISH WORKOUT
-                  </GradBtn>
+                        {/* prev / next exercise nav */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <button onClick={goPrev} disabled={cur === 0} aria-label="Previous exercise"
+                            className="flex items-center justify-center gap-1 py-3 rounded-2xl font-bold text-sm transition-opacity"
+                            style={{ width: 54, background: C.card, border: "1px solid " + C.line, color: C.text, opacity: cur === 0 ? 0.35 : 1 }}><ChevronLeft size={18} /></button>
+                          {cur < session.items.length - 1 ? (
+                            <GradBtn A={A} onClick={goNext} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-base">
+                              Next exercise <ChevronLeft size={17} style={{ transform: "rotate(180deg)" }} />
+                            </GradBtn>
+                          ) : (
+                            <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl" style={{ fontFamily: F.mono, fontSize: 11, color: C.faint, background: C.card, border: "1px solid " + C.line }}>
+                              <Check size={14} color={workDone === working.length ? C.green : C.faint} /> {workDone}/{working.length} sets done
+                            </div>
+                          )}
+                        </div>
+
+                        <GradBtn A={A} onClick={finishSession} className="w-full py-3.5 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 20, letterSpacing: 1 }}>
+                          FINISH WORKOUT
+                        </GradBtn>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -2305,7 +2482,7 @@ export default function BurnLabApp() {
                       <>
                         <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid " + A.a + "44", boxShadow: SHADOW.card }}>
                           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>DAILY TARGET · {(GOAL_LABEL[data.profile.goal] || "").toUpperCase()}</div>
-                          <div className="bl-shimmer" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 42, backgroundImage: SHIMMER }}>{fmtNum(t.goal)}</div>
+                          <div className="flex justify-center my-0.5"><HeroNumber value={t.goal} size={46} accent={A} /></div>
                           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day · maintenance {fmtNum(t.maintain)} kcal</div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 mb-4">
@@ -2356,7 +2533,7 @@ export default function BurnLabApp() {
                             </div>
                             <div className="text-right">
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>REMAINING</div>
-                              <div className="bl-shimmer" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 30, lineHeight: 1, backgroundImage: SHIMMER }}>{fmtNum(Math.max(0, t.goal - Math.round(dayTotals.kcal)))}</div>
+                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} size={34} glow={false} accent={{ a: C.green, b: "#6FE0A0" }} />
                             </div>
                           </div>
                           <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: C.card2 }}>
@@ -3152,16 +3329,65 @@ export default function BurnLabApp() {
               </div>
             )}
 
+            {/* ======= QUICK-ACTIONS SHEET (central FAB) ======= */}
+            {fabOpen && (() => {
+              const h = new Date().getHours();
+              const meal = h < 11 ? "b" : h < 15 ? "l" : h < 21 ? "d" : "s";
+              const openFood = () => { setTab("fuel"); setOverlay(null); setAddFor(meal); setAddStage("search"); setFoodQuery(""); };
+              const acts = [
+                { icon: Play, label: "Start workout", sub: program ? "Jump into " + program.days[nextDayIdx].name : "Pick a split", run: () => { setTab("train"); setOverlay(null); } },
+                { icon: Utensils, label: "Log food", sub: "Search or quick-add macros", run: openFood },
+                { icon: ScanLine, label: "Scan barcode", sub: "Look up a packaged food", run: () => { openFood(); setScanNonce(n => n + 1); setScanOpen(true); } },
+                { icon: Weight, label: "Weigh in", sub: weighedToday ? "Update today's weight" : "Log today's weight", run: () => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); } },
+                { icon: Camera, label: "Add progress photo", sub: photos.length + " stored", run: () => { fileRef.current && fileRef.current.click(); } },
+              ];
+              return (
+                <div className="fixed inset-0 z-30 flex items-end justify-center" onClick={() => setFabOpen(false)} style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}>
+                  <div className="w-full bl-fade" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, background: C.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, border: "1px solid " + C.line, boxShadow: SHADOW.hero, padding: SPACE[5], paddingBottom: "calc(env(safe-area-inset-bottom) + " + SPACE[5] + "px)" }}>
+                    <div className="mx-auto mb-4 rounded-full" style={{ width: 40, height: 4, background: C.line }} />
+                    <div className="flex items-center justify-between mb-4">
+                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, letterSpacing: 0.5, textTransform: "uppercase" }}>Quick Actions</div>
+                      <button onClick={() => setFabOpen(false)} aria-label="Close" className="p-2 rounded-full" style={{ background: C.card2, border: "1px solid " + C.line }}><X size={16} color={C.dim} /></button>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {acts.map((a, i) => {
+                        const Icon = a.icon;
+                        return (
+                          <button key={a.label} onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(false); a.run(); }}
+                            className="bl-stagger w-full flex items-center gap-3 text-left transition-transform active:scale-[0.98]"
+                            style={{ "--i": i, background: C.card2, border: "1px solid " + C.line, borderRadius: RADIUS.md, padding: SPACE[3] }}>
+                            <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 42, height: 42, background: A.a + "1F", border: "1px solid " + A.a + "3A" }}><Icon size={19} color={A.a} /></span>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-[15px]">{a.label}</div>
+                              <div className="text-xs truncate" style={{ color: C.dim }}>{a.sub}</div>
+                            </div>
+                            <ArrowUpRight size={16} color={C.faint} className="shrink-0" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ======= BOTTOM NAV — floating pill ======= */}
             <nav className="fixed left-1/2 -translate-x-1/2 w-full z-10 px-5" style={{ maxWidth: 480, bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
               <div className="flex items-center justify-between px-3 py-2 rounded-full" style={{ background: "#14161BF0", border: "1px solid " + C.line, backdropFilter: "blur(14px)", boxShadow: SHADOW.nav }}>
                 {[
                   { id: "home", label: "Home", icon: Home },
                   { id: "train", label: "Train", icon: Dumbbell },
+                  { fab: true },
                   { id: "fuel", label: "Fuel", icon: Utensils },
-                  { id: "trophies", label: "Trophies", icon: Trophy },
                   { id: "progress", label: "Progress", icon: TrendingUp },
-                ].map(t => {
+                ].map((t, ti) => {
+                  if (t.fab) return (
+                    <button key="fab" onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(true); }} aria-label="Quick actions" aria-expanded={fabOpen}
+                      className="flex items-center justify-center rounded-full transition-transform active:scale-90"
+                      style={{ width: 56, height: 56, marginTop: -24, background: AG, border: "3px solid " + C.bg, boxShadow: "0 12px 26px -6px " + A.a + "AA, " + SHADOW.glow(A.a) }}>
+                      <Plus size={26} color="#0D0E11" strokeWidth={2.8} />
+                    </button>
+                  );
                   const active = tab === t.id;
                   const Icon = t.icon;
                   return (
@@ -3403,7 +3629,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v3.1 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v4.0 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>
