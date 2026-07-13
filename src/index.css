@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 html, body, #root { min-height: 100%; }
-body { margin: 0; background: #08090B; }
+body { margin: 0; background: #000000; }
 
 /* Prevent iOS zoom-on-focus: keep all form controls at 16px+ */
 input, select, textarea { font-size: 16px; }
@@ -9,7 +9,7 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
-*:focus-visible { outline: 2px solid #FF4D2E; outline-offset: 1px; border-radius: 4px; }
+*:focus-visible { outline: 2px solid #FF5722; outline-offset: 1px; border-radius: 4px; }
 ::-webkit-scrollbar { width: 0; height: 0; }
 
 /* Entry animation for views */
@@ -70,5 +70,5 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
-  .bl-shimmer { color: #F2F0EA; background: none; }
+  .bl-shimmer { color: #FAFAFA; background: none; }
 }

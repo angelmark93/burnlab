@@ -17,11 +17,14 @@ const store = {
 };
 
 /* ================= DESIGN TOKENS ================= */
+/* OLED Editorial palette — pure-black canvas, zinc cards, one high-voltage orange accent.
+   Former semantic hues (blue/green/yellow) collapse to neutral zinc so the accent stands alone;
+   yellow is repointed to the accent orange for warm-up/RPE flourishes. */
 const C = {
-  bg: "#0D0E11", card: "#16181D", card2: "#1E2128", line: "#272B33",
-  text: "#F2F0EA", dim: "#9BA0AA", faint: "#5F6570",
-  red: "#E8442F", blue: "#3D6BFF", yellow: "#F2B928", green: "#37A75C",
-  plate5: "#E9E7E1", plate25: "#8A8F99",
+  bg: "#000000", card: "#0C0C0E", card2: "#1C1C1F", line: "rgba(63,63,70,0.45)",
+  text: "#FAFAFA", dim: "#A1A1AA", faint: "#52525B",
+  red: "#F0603A", blue: "#A1A1AA", yellow: "#FF5722", green: "#A1A1AA",
+  plate5: "#E4E4E7", plate25: "#71717A",
 };
 const F = {
   brand: "'Orbitron', sans-serif",
@@ -29,12 +32,10 @@ const F = {
   body: "'Barlow', sans-serif",
   mono: "'IBM Plex Mono', monospace",
 };
-const ACCENTS = {
-  ember:  { name: "Ember",  a: "#FF4D2E", b: "#FF8A3D" },
-  ice:    { name: "Ice",    a: "#3D9BFF", b: "#6BE0F2" },
-  volt:   { name: "Volt",   a: "#A8E82F", b: "#4DDB6A" },
-  violet: { name: "Violet", a: "#8B5CFF", b: "#D66BFF" },
-};
+/* Single locked accent — high-voltage orange. All four legacy theme keys resolve to it so any
+   previously-saved settings.accent still works; the Settings picker is removed. */
+const ORANGE = { name: "Orange", a: "#FF5722", b: "#FF7A45" };
+const ACCENTS = { ember: ORANGE, ice: ORANGE, volt: ORANGE, violet: ORANGE };
 /* soft elevation + accent-glow helpers, layered onto the flat card borders for a sleeker glass feel */
 const SHADOW = {
   card: "0 1px 0 0 rgba(255,255,255,0.035) inset, 0 10px 28px -16px rgba(0,0,0,0.6)",
@@ -50,12 +51,16 @@ const EASE = "cubic-bezier(0.22,0.9,0.3,1)";
 const DUR = { micro: 150, standard: 350, hero: 700 };
 const RADIUS = { sm: 10, md: 16, lg: 22, xl: 28, pill: 9999 };
 const SPACE = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 };
+/* Monochrome muscle identity — every muscle renders in the accent orange; the heat map now reads
+   as intensity only (dormant zinc -> hot orange) rather than per-muscle hue. */
 const MUSCLES = {
-  Chest: "#FF5C4A", Back: "#4D7CFF", Shoulders: "#F2B928", Biceps: "#9D6BFF",
-  Triceps: "#2FBFAE", Quads: "#FF8A3D", Hamstrings: "#4DA6FF", Glutes: "#FF5C8A",
-  Calves: "#37A75C", Abs: "#C9CED8",
+  Chest: "#FF5722", Back: "#FF5722", Shoulders: "#FF5722", Biceps: "#FF5722",
+  Triceps: "#FF5722", Quads: "#FF5722", Hamstrings: "#FF5722", Glutes: "#FF5722",
+  Calves: "#FF5722", Abs: "#FF5722",
 };
-const TIER = { bronze: "#C08452", silver: "#C6CBD4", gold: "#F2B928", platinum: "#9BE8F0" };
+/* Single-accent discipline — unlocked trophies all render in the accent orange (tier still labels
+   difficulty in copy, but no competing metallic hues). */
+const TIER = { bronze: "#FF5722", silver: "#FF5722", gold: "#FF5722", platinum: "#FF5722" };
 const MUSCLE_GROUPS = {
   "Upper Body": ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Abs"],
   "Lower Body": ["Quads", "Hamstrings", "Glutes", "Calves"],
@@ -887,9 +892,20 @@ const Chip = ({ children, color, style }) => (
   <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: (color || C.dim) + "22", color: color || C.dim, fontFamily: F.mono, fontSize: 11, ...style }}>{children}</span>
 );
 const SectionLabel = ({ children }) => (
-  <div className="flex items-center gap-2 mb-3">
-    <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: 2, color: C.faint }}>{children}</span>
+  <div className="flex items-center gap-3 mb-3 mt-1">
+    <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: C.faint, textTransform: "uppercase" }}>{children}</span>
     <div className="flex-1 h-px" style={{ background: C.line }} />
+  </div>
+);
+/* ScreenHead — the big editorial screen title (Nike/Apple Fitness): oversized condensed uppercase,
+   tight tracking, with a small mono eyebrow + optional right-aligned figure. */
+const ScreenHead = ({ eyebrow, title, right }) => (
+  <div className="flex items-end justify-between mb-5 mt-1">
+    <div>
+      {eyebrow && <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: "#FF5722", textTransform: "uppercase", marginBottom: 2 }}>{eyebrow}</div>}
+      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 44, lineHeight: 0.92, letterSpacing: -1.5, textTransform: "uppercase" }}>{title}</div>
+    </div>
+    {right != null && <div className="shrink-0 pb-1">{right}</div>}
   </div>
 );
 /* Apple-Activity-style concentric rings: nested thick bands, glossy gradient,
@@ -1008,25 +1024,30 @@ function MuscleBar({ label, color, value, target, focus }) {
     </div>
   );
 }
+/* Minimalist "plates on bar" — a 1px scale line, a thin collar, and plates stacked outward in the
+   accent orange (opacity scales with plate weight). Monochrome, editorial. */
 function PlateBar({ weight }) {
   const bd = plateBreakdown(weight);
   if (!bd) return null;
-  const shown = bd.plates.slice(0, 7);
-  let x = 78;
-  const nodes = shown.map((p, i) => { const node = <rect key={i} x={x} y={30 - p.h / 2} width="9" height={p.h} rx="2" fill={p.color} stroke={C.bg} strokeWidth="1" />; x += 10; return node; });
+  const shown = bd.plates.slice(0, 8);
   return (
-    <div className="mt-2 rounded-lg px-3 py-2 flex items-center gap-3" style={{ background: C.bg, border: "1px solid " + C.line }}>
-      <svg width="170" height="60" viewBox="0 0 170 60" aria-hidden="true">
-        <rect x="6" y="27" width="150" height="6" rx="3" fill="#3A3F49" />
-        <rect x="66" y="22" width="10" height="16" rx="2" fill="#4A505C" />
-        {nodes}
+    <div className="mt-3 rounded-2xl px-4 py-3" style={{ background: C.card2, border: "1px solid " + C.line }}>
+      <div className="flex items-center justify-between mb-1">
+        <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 2 }}>PER SIDE</span>
+        <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 20, letterSpacing: -0.5, fontVariantNumeric: "tabular-nums" }}>{fmtKg(weight)}<span style={{ fontSize: 11, color: C.dim }}> KG</span></span>
+      </div>
+      <svg width="100%" height="52" viewBox="0 0 200 52" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <line x1="6" y1="26" x2="98" y2="26" stroke={C.faint} strokeWidth="1" />
+        <line x1="96" y1="15" x2="96" y2="37" stroke={C.dim} strokeWidth="1.5" />
+        {shown.map((p, i) => {
+          const x = 100 + i * 11;
+          const h = 10 + (p.kg / 25) * 34;
+          return <rect key={i} x={x} y={26 - h / 2} width="8" height={h} rx="1.5" fill={ORANGE.a} fillOpacity={0.35 + (p.kg / 25) * 0.65} />;
+        })}
       </svg>
-      <div>
-        <div style={{ fontFamily: F.disp, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{fmtKg(weight)} <span style={{ fontSize: 13, color: C.dim }}>kg</span></div>
-        <div style={{ fontFamily: F.mono, fontSize: 10.5, color: C.dim }}>
-          {shown.length ? "per side: " + shown.map(p => fmtKg(p.kg)).join(" + ") : "empty bar"}
-          {bd.remainder > 0.01 && <span style={{ color: C.yellow }}> (+{fmtKg(bd.remainder)} short)</span>}
-        </div>
+      <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>
+        {shown.length ? shown.map(p => fmtKg(p.kg)).join(" · ") : "empty bar"}
+        {bd.remainder > 0.01 && <span style={{ color: ORANGE.a }}> · +{fmtKg(bd.remainder)} short</span>}
       </div>
     </div>
   );
@@ -1035,7 +1056,7 @@ function Toggle({ on, onChange, label }) {
   return (
     <button onClick={() => { if (vibrateEnabled) haptic("tap"); onChange(!on); }} role="switch" aria-checked={on} aria-label={label}
       className="relative rounded-full transition-all active:scale-95 shrink-0"
-      style={{ width: 46, height: 26, background: on ? C.green : C.card2, border: "1px solid " + (on ? C.green : C.line), boxShadow: on ? SHADOW.glow(C.green) : "none" }}>
+      style={{ width: 46, height: 26, background: on ? ORANGE.a : C.card2, border: "1px solid " + (on ? ORANGE.a : C.line), boxShadow: on ? SHADOW.glow(ORANGE.a) : "none" }}>
       <span className="absolute rounded-full transition-transform" style={{ top: 2, left: 2, width: 20, height: 20, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.4)", transform: on ? "translateX(20px)" : "translateX(0)" }} />
     </button>
   );
@@ -1184,7 +1205,7 @@ function Onboarding({ A, onDone }) {
             <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day &nbsp;·&nbsp; maintenance {fmtNum(targets.maintain)} kcal</div>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-3">
-            {[["PROTEIN", targets.proteinG + "g", MUSCLES.Chest], ["FAT", targets.fatG + "g", C.yellow], ["CARBS", targets.carbG + "g", C.blue]].map((m, i) => (
+            {[["PROTEIN", targets.proteinG + "g", C.text], ["FAT", targets.fatG + "g", C.text], ["CARBS", targets.carbG + "g", C.text]].map((m, i) => (
               <div key={i} className="rounded-xl py-3 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
                 <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 22, color: m[2] }}>{m[1]}</div>
                 <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>{m[0]}</div>
@@ -1292,10 +1313,10 @@ function bmiOf(weightKg, heightCm) {
 }
 function bmiBand(b) {
   if (b == null) return null;
-  if (b < 18.5) return { label: "Underweight", color: "#4DA6FF" };
-  if (b < 25) return { label: "Healthy range", color: "#37A75C" };
-  if (b < 30) return { label: "Overweight", color: "#F2B928" };
-  return { label: "Obese range", color: "#E8442F" };
+  if (b < 18.5) return { label: "Underweight", color: C.dim };
+  if (b < 25) return { label: "Healthy range", color: C.dim };
+  if (b < 30) return { label: "Overweight", color: C.dim };
+  return { label: "Obese range", color: C.red };
 }
 
 /* ---- progress photo compression ---- */
@@ -1731,7 +1752,7 @@ export default function BurnLabApp() {
 
   const A = ACCENTS[data.settings.accent] || ACCENTS.ember;
   const AG = "linear-gradient(90deg," + A.a + "," + A.b + ")";
-  const SHIMMER = "linear-gradient(90deg," + A.a + "," + A.b + ",#F2F0EA," + A.a + ")";
+  const SHIMMER = "linear-gradient(90deg," + A.a + "," + A.b + ",#FAFAFA," + A.a + ")";
   const gym = (data.profile && data.profile.gym) || "full";
   const focusMuscles = (data.profile && data.profile.focusMuscles) || [];
   const muscleTarget = m => data.settings.weeklyTarget + (focusMuscles.includes(m) ? 4 : 0);
@@ -1878,7 +1899,7 @@ export default function BurnLabApp() {
   };
 
   /* ---------- guards ---------- */
-  if (!loaded) return <div className="min-h-screen" style={{ background: "#0A0B0D" }} />;
+  if (!loaded) return <div className="min-h-screen" style={{ background: "#000000" }} />;
 
   const showOnboarding = !data.profile;
 
@@ -1923,15 +1944,14 @@ export default function BurnLabApp() {
 
   /* ================= RENDER ================= */
   return (
-    <div className="min-h-screen w-full flex justify-center" style={{ background: "#08090B", fontFamily: F.body, color: C.text }}>
+    <div className="min-h-screen w-full flex justify-center" style={{ background: "#000000", fontFamily: F.body, color: C.text }}>
       <div className="w-full relative flex flex-col" style={{ maxWidth: 480, background: C.bg, minHeight: "100vh", borderLeft: "1px solid " + C.line, borderRight: "1px solid " + C.line, isolation: "isolate" }}>
-        <LivingBackground A={A} />
         <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} style={{ display: "none" }} aria-hidden="true" />
         <input ref={importRef} type="file" accept="application/json,.json" onChange={onImportFile} style={{ display: "none" }} aria-hidden="true" />
 
         {/* ======= SPLASH ======= */}
         {splash && (
-          <div className={"fixed inset-0 z-50 flex flex-col items-center justify-center " + (splash === "out" ? "bl-gone" : "")} style={{ background: "#0A0B0D" }}>
+          <div className={"fixed inset-0 z-50 flex flex-col items-center justify-center " + (splash === "out" ? "bl-gone" : "")} style={{ background: "#000000" }}>
             <div className="bl-splash-in" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 36, letterSpacing: 4 }}>
               BURN<span className="bl-shimmer" style={{ backgroundImage: SHIMMER }}>LAB</span>
             </div>
@@ -1944,7 +1964,7 @@ export default function BurnLabApp() {
         ) : (
           <>
             {/* ======= HEADER ======= */}
-            <header className="flex items-center justify-between px-5 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
+            <header className="flex items-center justify-between px-6 pb-4" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
               <div style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 19, letterSpacing: 2, lineHeight: 1 }}>
                 BURN<span className="bl-shimmer" style={{ backgroundImage: SHIMMER }}>LAB</span>
               </div>
@@ -1957,7 +1977,7 @@ export default function BurnLabApp() {
             </header>
             <div className="pointer-events-none" style={{ height: 16, marginTop: -16, background: "linear-gradient(180deg," + C.bg + "B3, transparent)" }} aria-hidden="true" />
 
-            <main className="flex-1 px-5 overflow-y-auto" style={{ paddingBottom: 150 }}>
+            <main className="flex-1 px-6 overflow-y-auto" style={{ paddingBottom: 150 }}>
 
               {/* ================= HOME ================= */}
               {tab === "home" && (
@@ -1983,26 +2003,25 @@ export default function BurnLabApp() {
                       ...(data.profile && data.profile.targets ? [{ label: "KCAL LEFT", val: fmtNum(Math.max(0, data.profile.targets.goal - eatenToday)) }] : []),
                     ];
                     return (
-                      <div className="relative overflow-hidden rounded-3xl p-5 mb-4" style={{ background: "radial-gradient(120% 150% at 85% -20%," + A.a + "40, transparent 55%), radial-gradient(90% 120% at -10% 115%," + A.b + "2E, transparent 50%), linear-gradient(150deg,#1B1E24,#101216)", border: "1px solid " + A.a + "3A", borderTop: "1px solid " + A.a + "55", boxShadow: SHADOW.hero }}>
-                        <div className="bl-orb" style={{ width: 130, height: 130, background: A.a, top: -46, right: -24 }} aria-hidden="true" />
+                      <div className="relative overflow-hidden rounded-3xl p-6 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
                         <div className="relative">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: C.dim, letterSpacing: 2 }}><Flame size={12} color={A.a} /> WEEKLY BURN</div>
-                            <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{workoutsThisWeek}/{goalSessions} SESSIONS</span>
+                            <div className="flex items-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 3 }}><Flame size={12} color={A.a} /> WEEKLY BURN</div>
+                            <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1, fontVariantNumeric: "tabular-nums" }}>{workoutsThisWeek}/{goalSessions} SESSIONS</span>
                           </div>
-                          <div className="flex items-end gap-1 mt-1">
-                            <HeroNumber value={pct} suffix="%" size={60} accent={A} />
+                          <div className="flex items-end gap-1 mt-2">
+                            <HeroNumber value={pct} suffix="%" size={72} accent={A} />
                           </div>
-                          <div className="flex gap-1 mt-3" aria-hidden="true">
+                          <div className="flex gap-1 mt-4" aria-hidden="true">
                             {Array.from({ length: SEGS }, (_, i) => (
-                              <span key={i} className="flex-1 rounded-sm" style={{ height: 14, background: i < Math.round((pct / 100) * SEGS) ? AG : "#ffffff14" }} />
+                              <span key={i} className="flex-1 rounded-full" style={{ height: 6, background: i < Math.round((pct / 100) * SEGS) ? A.a : "#ffffff12" }} />
                             ))}
                           </div>
-                          <div className="grid mt-4 pt-3" style={{ gridTemplateColumns: "repeat(" + heroStats.length + ",1fr)", borderTop: "1px solid #ffffff17" }}>
+                          <div className="grid mt-5 pt-4" style={{ gridTemplateColumns: "repeat(" + heroStats.length + ",1fr)", borderTop: "1px solid " + C.line }}>
                             {heroStats.map((s, i) => (
-                              <div key={s.label} className="text-center" style={{ borderLeft: i > 0 ? "1px solid #ffffff17" : "none" }}>
-                                <div style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 700, color: C.text }}>{s.val}</div>
-                                <div style={{ fontFamily: F.mono, fontSize: 8, color: C.faint, letterSpacing: 1 }}>{s.label}</div>
+                              <div key={s.label} className="text-center" style={{ borderLeft: i > 0 ? "1px solid " + C.line : "none" }}>
+                                <div style={{ fontFamily: F.disp, fontSize: 22, fontWeight: 800, letterSpacing: -0.5, color: C.text, fontVariantNumeric: "tabular-nums" }}>{s.val}</div>
+                                <div style={{ fontFamily: F.mono, fontSize: 8, color: C.faint, letterSpacing: 2, marginTop: 2 }}>{s.label}</div>
                               </div>
                             ))}
                           </div>
@@ -2059,11 +2078,10 @@ export default function BurnLabApp() {
 
                   {/* next session - the app's one clear action, sized and lit up to feel like it */}
                   {program ? (
-                    <div className="relative overflow-hidden rounded-3xl p-6 mb-4" style={{ background: C.card2, border: "1px solid " + C.line, boxShadow: SHADOW.lifted }}>
-                      <div className="bl-orb bl-orb2" style={{ width: 100, height: 100, background: A.b, bottom: -40, right: -20, opacity: 0.25 }} aria-hidden="true" />
+                    <div className="relative overflow-hidden rounded-3xl p-6 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
                       <div className="relative">
-                        <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>UP NEXT</div>
-                        <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 41, lineHeight: 1.05, textTransform: "uppercase" }}>{program.days[nextDayIdx].name}</div>
+                        <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 3 }}>UP NEXT</div>
+                        <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 46, lineHeight: 1, letterSpacing: -1, textTransform: "uppercase", marginTop: 2 }}>{program.days[nextDayIdx].name}</div>
                         <div className="text-sm mt-1" style={{ color: C.dim }}>{program.days[nextDayIdx].items.length} exercises · {program.days[nextDayIdx].items.reduce((a, i) => a + i.sets, 0)} working sets</div>
                         {session ? (
                           <button onClick={() => setTab("train")} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm" style={{ background: C.card, border: "1px solid " + A.a, color: A.a }}>
@@ -2097,7 +2115,7 @@ export default function BurnLabApp() {
                       return (
                         <button key={c.key} onClick={() => { if (data.settings.vibrate) haptic("tap"); c.go(); }}
                           className="bl-stagger relative overflow-hidden text-left transition-transform active:scale-[0.97]"
-                          style={{ "--i": i, background: C.card, border: "1px solid " + C.line, borderRadius: RADIUS.lg, padding: SPACE[4], boxShadow: SHADOW.card }}>
+                          style={{ "--i": i, background: C.card, border: "1px solid " + C.line, borderRadius: 24, padding: SPACE[5] }}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="flex items-center justify-center rounded-full" style={{ width: 34, height: 34, background: c.color + "1F", border: "1px solid " + c.color + "3A" }}><Icon size={16} color={c.color} /></span>
                             <ArrowUpRight size={15} color={C.faint} />
@@ -2117,8 +2135,7 @@ export default function BurnLabApp() {
                     return (
                       <button onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab("muscles"); }}
                         className="w-full relative overflow-hidden text-left transition-transform active:scale-[0.98] mb-4"
-                        style={{ background: "linear-gradient(135deg,#1B1E24,#111318)", border: "1px solid " + C.line, borderRadius: RADIUS.xl, padding: SPACE[5], boxShadow: SHADOW.card }}>
-                        <div className="bl-orb bl-orb2" style={{ width: 120, height: 120, background: A.a, top: -40, right: -20, opacity: 0.22 }} aria-hidden="true" />
+                        style={{ background: C.card, border: "1px solid " + C.line, borderRadius: 24, padding: SPACE[6] }}>
                         <div className="relative flex items-center justify-between gap-3">
                           <div>
                             <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>MUSCLE MAP</div>
@@ -2137,7 +2154,7 @@ export default function BurnLabApp() {
                     <ActivityRings rings={[
                       { label: "Sets", color: A.a, value: weekAgg.sets, target: weekAgg.setsT },
                       { label: "Muscles", color: C.blue, value: weekAgg.muscles, target: weekAgg.musclesT },
-                      { label: "Exercises", color: "#5CE0D8", value: weekAgg.exs, target: weekAgg.exsT },
+                      { label: "Exercises", color: "#71717A", value: weekAgg.exs, target: weekAgg.exsT },
                     ]} />
                   </div>
 
@@ -2195,8 +2212,7 @@ export default function BurnLabApp() {
                     </div>
                   </div>
 
-                  <div className="rounded-3xl p-5 mt-4 mb-4 relative overflow-hidden" style={{ background: "linear-gradient(160deg,#1A1D23,#0F1115)", border: "1px solid " + C.line, borderTop: "1px solid #ffffff14", boxShadow: SHADOW.hero }}>
-                    <div className="bl-orb" style={{ width: 200, height: 200, background: A.a, top: -80, left: "50%", marginLeft: -100, opacity: 0.14 }} aria-hidden="true" />
+                  <div className="rounded-3xl p-6 mt-5 mb-5 relative overflow-hidden" style={{ background: C.card, border: "1px solid " + C.line }}>
                     <div className="relative">
                       <AnatomyBody fem={data.profile && data.profile.sex === "f"} mode="heat" heatMap={heatMap} size={260} />
                       <div className="flex items-center justify-center gap-2 mt-4">
@@ -2239,16 +2255,19 @@ export default function BurnLabApp() {
               {/* ================= TRAIN: PICKER ================= */}
               {tab === "train" && !session && (
                 <div className="bl-fade">
-                  <SectionLabel>CHOOSE YOUR SPLIT</SectionLabel>
-                  <div className="flex gap-2 mb-5">
-                    {Object.entries(PROGRAMS).map(([k, pr]) => (
-                      <button key={k} onClick={() => save({ ...data, program: k })}
-                        className="flex-1 rounded-xl px-2 py-2.5 text-center transition-colors"
-                        style={{ background: data.program === k ? A.a : C.card, border: "1px solid " + (data.program === k ? A.a : C.line), color: data.program === k ? "#0D0E11" : C.dim }}>
-                        <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 16, lineHeight: 1.1 }}>{pr.name.toUpperCase()}</div>
-                        <div style={{ fontFamily: F.mono, fontSize: 9 }}>{pr.freq}</div>
-                      </button>
-                    ))}
+                  <ScreenHead eyebrow="Your program" title="Train" />
+                  <div className="grid grid-cols-3 gap-2.5 mb-6">
+                    {Object.entries(PROGRAMS).map(([k, pr]) => {
+                      const on = data.program === k;
+                      return (
+                        <button key={k} onClick={() => { if (data.settings.vibrate) haptic("tap"); save({ ...data, program: k }); }}
+                          className="rounded-2xl px-2 py-4 text-center transition-all active:scale-[0.97]"
+                          style={{ background: on ? A.a : C.card, border: "1px solid " + (on ? A.a : C.line), color: on ? "#000" : C.text }}>
+                          <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 17, lineHeight: 1, letterSpacing: -0.5 }}>{pr.name.toUpperCase()}</div>
+                          <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, marginTop: 4, color: on ? "#000" : C.faint }}>{pr.freq}</div>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {program ? (
@@ -2343,6 +2362,9 @@ export default function BurnLabApp() {
                     const heaviest = Math.max(0, ...working.map(s => parseFloat(s.w) || 0));
                     const goPrev = () => { if (data.settings.vibrate) haptic("tap"); setOpenIdx(Math.max(0, cur - 1)); };
                     const goNext = () => { if (data.settings.vibrate) haptic("tap"); setOpenIdx(Math.min(session.items.length - 1, cur + 1)); };
+                    /* Progressive Focus: the current set = first not-yet-logged set. Marking it done
+                       shifts this forward automatically, so the highlight auto-advances with no extra state. */
+                    const focusIdx = sets.findIndex(s => !s.done);
                     let workingNo = 0;
                     return (
                       <>
@@ -2364,7 +2386,7 @@ export default function BurnLabApp() {
 
                         <div className="rounded-3xl overflow-hidden mb-4 bl-fade" style={{ background: C.card, border: "1px solid " + C.line, boxShadow: SHADOW.card }}>
                           {/* exercise header */}
-                          <div className="p-5" style={{ background: "radial-gradient(120% 130% at 90% -20%," + A.a + "22, transparent 55%)" }}>
+                          <div className="p-5">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>EXERCISE {cur + 1} / {session.items.length}{it.focus ? " · 🎯 FOCUS" : ""}</div>
@@ -2400,33 +2422,36 @@ export default function BurnLabApp() {
                               if (!isW) workingNo++;
                               const labelNo = isW ? "W" : workingNo;
                               const prevSet = !isW && prev ? prev.sets[workingNo - 1] : null;
-                              const doneBg = s.done ? (isW ? C.yellow + "18" : C.green + "18") : C.card2;
-                              const doneBd = s.done ? (isW ? C.yellow + "55" : C.green + "55") : C.line;
+                              const isFocus = i === focusIdx;
+                              const cellBg = s.done ? A.a + "1F" : C.card2;
                               return (
-                                <div key={i} className="grid gap-1.5 items-center py-1" style={{ gridTemplateColumns: "26px 46px 1fr 1fr 52px 32px" }}>
-                                  <span className="flex items-center justify-center rounded" style={{ fontFamily: isW ? F.mono : F.disp, fontWeight: 800, fontSize: isW ? 11 : 16, height: isW ? 20 : "auto", color: isW ? C.yellow : C.dim, background: isW ? C.yellow + "1A" : "transparent", border: isW ? "1px solid " + C.yellow + "40" : "none" }}>{labelNo}</span>
-                                  <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{prevSet ? fmtKg(prevSet.w) + "×" + prevSet.r : "-"}</span>
+                                <div key={i} className="grid gap-1.5 items-center px-1 py-1.5 my-0.5"
+                                  style={{ gridTemplateColumns: "26px 44px 1fr 1fr 50px 40px", borderRadius: 16,
+                                    background: isFocus ? C.card2 : "transparent", opacity: isFocus || focusIdx === -1 ? 1 : 0.3,
+                                    transition: "opacity 220ms " + EASE + ", background 220ms " + EASE }}>
+                                  <span className="flex items-center justify-center rounded-full" style={{ fontFamily: isW ? F.mono : F.disp, fontWeight: 800, fontSize: isW ? 11 : 16, width: isW ? 22 : "auto", height: isW ? 22 : "auto", color: isW ? A.a : isFocus ? A.a : C.dim, background: isW ? A.a + "1A" : "transparent", border: isW ? "1px solid " + A.a + "40" : "none" }}>{labelNo}</span>
+                                  <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, fontVariantNumeric: "tabular-nums" }}>{prevSet ? fmtKg(prevSet.w) + "×" + prevSet.r : "-"}</span>
                                   <input type="number" inputMode="decimal" value={s.w} placeholder="kg" aria-label={"Set " + labelNo + " weight"}
                                     onChange={e => updateSet(cur, i, "w", e.target.value)}
-                                    className="w-full rounded-lg px-1 py-1.5 text-center font-semibold"
-                                    style={{ fontSize: 16, background: doneBg, border: "1px solid " + doneBd, color: C.text, fontFamily: F.mono }} />
+                                    className="w-full text-center font-semibold"
+                                    style={{ fontSize: 16, height: 42, background: cellBg, border: "none", borderRadius: 999, color: C.text, fontFamily: F.mono, fontVariantNumeric: "tabular-nums" }} />
                                   <input type="number" inputMode="numeric" value={s.r} placeholder={isW ? "reps" : it.lo + "-" + it.hi} aria-label={"Set " + labelNo + " reps"}
                                     onChange={e => updateSet(cur, i, "r", e.target.value)}
-                                    className="w-full rounded-lg px-1 py-1.5 text-center font-semibold"
-                                    style={{ fontSize: 16, background: doneBg, border: "1px solid " + doneBd, color: C.text, fontFamily: F.mono }} />
+                                    className="w-full text-center font-semibold"
+                                    style={{ fontSize: 16, height: 42, background: cellBg, border: "none", borderRadius: 999, color: C.text, fontFamily: F.mono, fontVariantNumeric: "tabular-nums" }} />
                                   {isW ? (
                                     <span className="text-center" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>—</span>
                                   ) : (
                                     <select value={s.rpe} onChange={e => updateSet(cur, i, "rpe", parseFloat(e.target.value))} aria-label={"Set " + labelNo + " RPE"}
-                                      className="rounded-lg py-1.5 text-center"
-                                      style={{ fontSize: 16, background: C.card2, border: "1px solid " + C.line, color: C.dim, fontFamily: F.mono }}>
+                                      className="text-center"
+                                      style={{ fontSize: 15, height: 42, background: C.card2, border: "none", borderRadius: 999, color: C.dim, fontFamily: F.mono }}>
                                       {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(v => <option key={v} value={v}>{v}</option>)}
                                     </select>
                                   )}
                                   <button onClick={() => toggleDone(cur, i, it.rest)} aria-label={"Mark set " + labelNo + (s.done ? " not done" : " done")}
-                                    className="h-8 w-8 rounded-lg flex items-center justify-center transition-colors"
-                                    style={{ background: s.done ? (isW ? C.yellow : C.green) : C.card2, border: "1px solid " + (s.done ? (isW ? C.yellow : C.green) : C.line) }}>
-                                    <Check size={15} color={s.done ? "#fff" : C.faint} />
+                                    className="flex items-center justify-center transition-transform active:scale-90"
+                                    style={{ height: 42, width: 40, borderRadius: 999, background: s.done ? A.a : C.card2, border: "none" }}>
+                                    <Check size={16} color={s.done ? "#000" : C.faint} strokeWidth={s.done ? 3 : 2} />
                                   </button>
                                 </div>
                               );
@@ -2467,6 +2492,7 @@ export default function BurnLabApp() {
               {/* ================= FUEL ================= */}
               {tab === "fuel" && (
                 <div className="bl-fade">
+                  <ScreenHead eyebrow="Today's intake" title="Fuel" />
                   {!data.profile || data.profile.skipped || !data.profile.targets ? (
                     <div className="rounded-2xl p-6 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
                       <Utensils size={26} color={C.faint} className="mx-auto mb-2" />
@@ -2486,7 +2512,7 @@ export default function BurnLabApp() {
                           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day · maintenance {fmtNum(t.maintain)} kcal</div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 mb-4">
-                          {[["PROTEIN", t.proteinG + "g", MUSCLES.Chest], ["FAT", t.fatG + "g", C.yellow], ["CARBS", t.carbG + "g", C.blue]].map((m, i) => (
+                          {[["PROTEIN", t.proteinG + "g", C.text], ["FAT", t.fatG + "g", C.text], ["CARBS", t.carbG + "g", C.text]].map((m, i) => (
                             <div key={i} className="rounded-xl py-3 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
                               <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 22, color: m[2] }}>{m[1]}</div>
                               <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1 }}>{m[0]}</div>
@@ -2533,14 +2559,14 @@ export default function BurnLabApp() {
                             </div>
                             <div className="text-right">
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>REMAINING</div>
-                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} size={34} glow={false} accent={{ a: C.green, b: "#6FE0A0" }} />
+                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} size={34} glow={false} accent={A} />
                             </div>
                           </div>
                           <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: C.card2 }}>
                             <div className="h-full rounded-full transition-all" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: dayTotals.kcal > t.goal ? C.yellow : AG }} />
                           </div>
                           <div className="grid grid-cols-3 gap-2 mt-3">
-                            {[["PROTEIN", dayTotals.p, t.proteinG, MUSCLES.Chest], ["CARBS", dayTotals.c, t.carbG, C.blue], ["FAT", dayTotals.f, t.fatG, C.yellow]].map(([l, v, tg, col]) => (
+                            {[["PROTEIN", dayTotals.p, t.proteinG, A.a], ["CARBS", dayTotals.c, t.carbG, A.a], ["FAT", dayTotals.f, t.fatG, A.a]].map(([l, v, tg, col]) => (
                               <div key={l}>
                                 <div className="flex items-baseline justify-between">
                                   <span style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>{l}</span>
@@ -2618,18 +2644,18 @@ export default function BurnLabApp() {
               {/* ================= TROPHIES ================= */}
               {tab === "trophies" && (
                 <div className="bl-fade">
-                  <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
-                    <Trophy size={22} color={C.yellow} className="mx-auto mb-1" />
-                    <div style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 30 }}>{troph.filter(t => t.done).length}<span style={{ color: C.faint, fontSize: 18 }}> / {troph.length}</span></div>
-                    <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim, letterSpacing: 2 }}>TROPHIES UNLOCKED</div>
-                  </div>
-                  <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1">
-                    {["All", ...Object.keys(CATEGORY_LABEL)].map(cat => (
-                      <button key={cat} onClick={() => setTrophyCat(cat)} className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors"
-                        style={{ background: trophyCat === cat ? (cat === "All" ? C.text : A.a) : C.card, color: trophyCat === cat ? (cat === "All" ? C.bg : "#0D0E11") : C.dim, border: "1px solid " + (trophyCat === cat ? "transparent" : C.line) }}>
-                        {cat === "All" ? "All" : CATEGORY_LABEL[cat]}
-                      </button>
-                    ))}
+                  <ScreenHead eyebrow={troph.filter(t => t.done).length + " of " + troph.length + " unlocked"} title="Trophies"
+                    right={<HeroNumber value={troph.filter(t => t.done).length} size={40} accent={A} />} />
+                  <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
+                    {["All", ...Object.keys(CATEGORY_LABEL)].map(cat => {
+                      const on = trophyCat === cat;
+                      return (
+                        <button key={cat} onClick={() => setTrophyCat(cat)} className="px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors"
+                          style={{ background: on ? A.a : C.card, color: on ? "#000" : C.dim, border: "1px solid " + (on ? A.a : C.line) }}>
+                          {cat === "All" ? "All" : CATEGORY_LABEL[cat]}
+                        </button>
+                      );
+                    })}
                   </div>
                   {["platinum", "gold", "silver", "bronze"].map(tier => (
                     <div key={tier}>
@@ -2664,6 +2690,7 @@ export default function BurnLabApp() {
               {/* ================= PROGRESS ================= */}
               {tab === "progress" && (
                 <div className="bl-fade">
+                  <ScreenHead eyebrow="Your trajectory" title="Progress" />
                   <SectionLabel>BODYWEIGHT</SectionLabel>
                   <div className="rounded-3xl p-4 mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
                     {(() => {
@@ -2876,7 +2903,7 @@ export default function BurnLabApp() {
 
             {/* ======= LIBRARY OVERLAY ======= */}
             {overlay === "library" && (
-              <div className="fixed inset-0 z-30 flex justify-center" style={{ background: "#08090B" }}>
+              <div className="fixed inset-0 z-30 flex justify-center" style={{ background: "#000000" }}>
                 <div className="w-full flex flex-col" style={{ maxWidth: 480, background: C.bg }}>
                   <div className="flex items-center gap-3 px-5 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
                     <button onClick={() => setOverlay(null)} aria-label="Back" className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }}><ChevronLeft size={16} color={C.dim} /></button>
@@ -3092,7 +3119,7 @@ export default function BurnLabApp() {
                     </div>
                     {(() => { const g = parseFloat(portionG) || 0; const m = macrosFor(portionFood, g); return (
                       <div className="grid grid-cols-4 gap-2 mb-4">
-                        {[["KCAL", fmtNum(m.kcal), C.text], ["PROTEIN", m.p + "g", MUSCLES.Chest], ["CARBS", m.c + "g", C.blue], ["FAT", m.f + "g", C.yellow]].map(([l, v, col]) => (
+                        {[["KCAL", fmtNum(m.kcal), C.text], ["PROTEIN", m.p + "g", C.text], ["CARBS", m.c + "g", C.text], ["FAT", m.f + "g", C.text]].map(([l, v, col]) => (
                           <div key={l} className="rounded-xl py-2.5 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
                             <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 17, color: col }}>{v}</div>
                             <div style={{ fontFamily: F.mono, fontSize: 8, color: C.faint, letterSpacing: 1 }}>{l}</div>
@@ -3457,7 +3484,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
   );
 
   return (
-    <div className="fixed inset-0 z-30 flex justify-center" style={{ background: "#08090B" }}>
+    <div className="fixed inset-0 z-30 flex justify-center" style={{ background: "#000000" }}>
       <div className="w-full flex flex-col" style={{ maxWidth: 480, background: C.bg }}>
         <div className="flex items-center gap-3 px-5 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
           <button onClick={onClose} aria-label="Back" className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }}><ChevronLeft size={16} color={C.dim} /></button>
@@ -3521,19 +3548,6 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
               })}
             </div>
             <GradBtn A={A} onClick={applyProfile} className="w-full py-3 rounded-xl text-sm">{saved ? "Saved - targets recalculated ✓" : "Save & recalculate targets"}</GradBtn>
-          </div>
-
-          <SectionLabel>APPEARANCE</SectionLabel>
-          <div className="rounded-2xl p-4 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
-            <div className="text-sm font-semibold mb-3">Accent theme</div>
-            <div className="flex gap-3">
-              {Object.entries(ACCENTS).map(([k, ac]) => (
-                <button key={k} onClick={() => setSetting("accent", k)} aria-label={ac.name} className="flex flex-col items-center gap-1.5">
-                  <span className="rounded-full" style={{ width: 40, height: 40, background: "linear-gradient(135deg," + ac.a + "," + ac.b + ")", border: data.settings.accent === k ? "3px solid #F2F0EA" : "3px solid transparent" }} />
-                  <span style={{ fontFamily: F.mono, fontSize: 9, color: data.settings.accent === k ? C.text : C.faint }}>{ac.name.toUpperCase()}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
           <SectionLabel>REST TIMER</SectionLabel>
@@ -3629,7 +3643,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v4.0 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v5.0 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>
