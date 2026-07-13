@@ -94,7 +94,7 @@ Local dev: `npm install`, then `npm run dev`.
 
 ## Updating after changes
 
-Bump `CACHE` in `public/sw.js` (currently `burnlab-v13`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
+Bump `CACHE` in `public/sw.js` (currently `burnlab-v14`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
 
 ## Notes
 

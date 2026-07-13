@@ -957,7 +957,7 @@ function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, gl
   return (
     <span className={"inline-flex items-baseline " + className} style={style}>
       {prefix != null && <span style={{ fontFamily: F.mono, fontWeight: 600, fontSize: size * 0.3, color: C.dim, marginRight: 3 }}>{prefix}</span>}
-      <span style={{ fontFamily: F.disp, fontSize: size, lineHeight: 1.12, paddingTop: "0.06em", letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 22px " + A.a + "55)" : "none" }}>{shown}</span>
+      <span style={{ fontFamily: F.disp, fontSize: size, lineHeight: 1.12, paddingTop: "0.06em", paddingRight: "0.14em", letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 22px " + A.a + "55)" : "none" }}>{shown}</span>
       {suffix != null && <span style={{ fontFamily: F.disp, fontSize: size * 0.42, color: A.a, marginLeft: 4, paddingBottom: size * 0.06 }}>{suffix}</span>}
     </span>
   );
