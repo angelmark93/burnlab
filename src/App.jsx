@@ -18,22 +18,26 @@ const store = {
 };
 
 /* ================= DESIGN TOKENS ================= */
-/* OLED Editorial palette — pure-black canvas, zinc cards, one high-voltage orange accent.
-   Former semantic hues (blue/green/yellow) collapse to neutral zinc so the accent stands alone;
-   yellow is repointed to the accent orange for warm-up/RPE flourishes. */
+/* Editorial Inversion palette — stark white cards on a near-black canvas, near-black ink on the
+   cards, one scarce orange accent (glows / timer / arrows only). The primary text scale (text/dim/
+   faint) is INK, tuned for white surfaces; a parallel onBg scale carries the few chrome elements
+   that sit directly on the black canvas (screen headers, section labels, nav, header row). */
 const C = {
-  bg: "#000000", card: "#0C0C0E", card2: "#1C1C1F", line: "rgba(63,63,70,0.45)",
-  text: "#FAFAFA", dim: "#A1A1AA", faint: "#52525B",
-  red: "#F0603A", blue: "#A1A1AA", yellow: "#FF5722", green: "#A1A1AA",
-  plate5: "#E4E4E7", plate25: "#71717A",
+  bg: "#0A0A0C", card: "#FFFFFF", card2: "#F1F1F3", line: "rgba(0,0,0,0.10)",
+  text: "#0A0A0B", dim: "#6B6B73", faint: "#9A9AA2",           // ink — for white cards
+  onBg: "#FAFAFA", onBgDim: "#A1A1AA", onBgFaint: "#6A6A72",   // light — for the black canvas
+  onLine: "rgba(255,255,255,0.10)",
+  red: "#DC4A2B", blue: "#6B6B73", yellow: "#FF5722", green: "#16A34A",
+  plate5: "#52525B", plate25: "#A1A1AA",
 };
-/* Cinematic Athletic type system: Anton (ultra-heavy condensed) carries every title + hero number;
-   Archivo (modern grotesk) replaces Barlow for body/UI; IBM Plex Mono stays for data + metadata. */
-/* NIKE custom display face carries titles + hero numbers (falls back to Anton); Archivo body/UI. */
+/* Editorial Inversion type system: Anton (ultra-heavy condensed, upright) carries every display
+   title + hero number — upright kills the italic overhang that clipped the old NIKE face; Archivo
+   (grotesk) for body/UI; Doto (dot-matrix LCD) for the rest timer; IBM Plex Mono for data/metadata. */
 const F = {
-  brand: "'Archivo', sans-serif",
-  disp: "'NIKE', 'Anton', sans-serif",
+  brand: "'Anton', 'Archivo', sans-serif",
+  disp: "'Anton', 'Archivo Black', sans-serif",
   body: "'Archivo', sans-serif",
+  timer: "'Doto', 'IBM Plex Mono', monospace",
   mono: "'IBM Plex Mono', monospace",
 };
 /* Accent themes — orange is the default brand, with blue / green / yellow reinstated as options.
@@ -45,14 +49,15 @@ const ACCENTS = {
   volt:   { name: "Green",  a: "#22C55E", b: "#7CE88F" },
   violet: { name: "Yellow", a: "#F2B01E", b: "#FFD34D" },
 };
-/* soft elevation + accent-glow helpers, layered onto the flat card borders for a sleeker glass feel */
+/* Elevation for white cards on the near-black canvas — soft neutral drop shadows (no inset white
+   highlight, which only reads on dark surfaces). Accent glow stays for the scarce orange moments. */
 const SHADOW = {
-  card: "0 1px 0 0 rgba(255,255,255,0.035) inset, 0 10px 28px -16px rgba(0,0,0,0.6)",
-  hero: "0 1px 0 0 rgba(255,255,255,0.05) inset, 0 18px 40px -18px rgba(0,0,0,0.65)",
+  card: "0 2px 8px -2px rgba(0,0,0,0.35), 0 8px 24px -12px rgba(0,0,0,0.45)",
+  hero: "0 4px 14px -4px rgba(0,0,0,0.4), 0 18px 44px -18px rgba(0,0,0,0.55)",
   glow: hex => "0 8px 22px -6px " + hex + "59",
-  nav: "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 -10px 30px -12px rgba(0,0,0,0.55)",
-  subtle: "0 2px 4px rgba(0,0,0,0.1)",
-  lifted: "0 8px 16px rgba(0,0,0,0.3)",
+  nav: "0 -6px 24px -12px rgba(0,0,0,0.5)",
+  subtle: "0 1px 3px rgba(0,0,0,0.18)",
+  lifted: "0 10px 24px -8px rgba(0,0,0,0.45)",
 };
 /* motion + layout scales — the ad hoc paddings/radii/timings get consolidated onto these
    as each screen is touched (v4.0). Not a big-bang refactor; a shared vocabulary to reach for. */
@@ -301,7 +306,7 @@ function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size
       <div className="flex gap-1 mb-3 rounded-full p-1" style={{ background: C.card2, border: "1px solid " + C.line }}>
         {["front", "back"].map(v => (
           <button key={v} type="button" onClick={() => { setView(v); setTap(null); }} className="px-4 py-1.5 rounded-full text-xs font-bold transition-colors"
-            style={{ background: view === v ? C.text : "transparent", color: view === v ? C.bg : C.dim }}>
+            style={{ background: view === v ? C.text : "transparent", color: view === v ? "#fff" : C.dim }}>
             {v === "front" ? "Front" : "Back"}
           </button>
         ))}
@@ -902,17 +907,17 @@ const Chip = ({ children, color, style }) => (
 );
 const SectionLabel = ({ children }) => (
   <div className="flex items-center gap-3 mb-3 mt-1">
-    <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: C.faint, textTransform: "uppercase" }}>{children}</span>
-    <div className="flex-1 h-px" style={{ background: C.line }} />
+    <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: C.onBgDim, textTransform: "uppercase" }}>{children}</span>
+    <div className="flex-1 h-px" style={{ background: C.onLine }} />
   </div>
 );
-/* ScreenHead — the big editorial screen title (Nike/Apple Fitness): oversized condensed uppercase,
-   tight tracking, with a small mono eyebrow + optional right-aligned figure. */
+/* ScreenHead — the big editorial screen title on the near-black canvas: ultra-heavy upright Anton
+   filling the width, uppercase, with a small orange mono eyebrow + optional right-aligned figure. */
 const ScreenHead = ({ eyebrow, title, right }) => (
   <div className="flex items-end justify-between mb-5 mt-1">
-    <div>
-      {eyebrow && <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: "#FF5722", textTransform: "uppercase", marginBottom: 2 }}>{eyebrow}</div>}
-      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 44, lineHeight: 1.02, letterSpacing: -1.5, textTransform: "uppercase" }}>{title}</div>
+    <div className="min-w-0">
+      {eyebrow && <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: "#FF5722", textTransform: "uppercase", marginBottom: 4 }}>{eyebrow}</div>}
+      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 50, lineHeight: 0.9, letterSpacing: "0.01em", textTransform: "uppercase", color: C.onBg }}>{title}</div>
     </div>
     {right != null && <div className="shrink-0 pb-1">{right}</div>}
   </div>
@@ -946,20 +951,77 @@ function useCountUp(value, duration = DUR.hero) {
   return display;
 }
 
-/* HeroNumber — the Dribbble "LED numeral" treatment: large tracked-out tabular mono digits with a
-   gradient fill + soft glow, counting up on mount. One reusable home for the app's headline figures.
-   Numeric values animate; pre-formatted strings (e.g. "12,340") render statically. */
-function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, glow = true, className = "", style = {} }) {
-  const A = accent || ACCENTS.ember;
+/* HeroNumber — the editorial headline figure: ultra-heavy upright Anton, solid near-black ink on
+   the white card (orange stays scarce — pass `accent` only for the rare highlighted figure), counting
+   up on mount. CLIP-PROOF by construction: upright face (no italic overhang), tabular figures, and
+   container-query fluid sizing (`cqi`) so the digit string auto-scales to its card's width instead of
+   overflowing — every .liquid-glass card is a size container. `size` is the MAX px; it shrinks in
+   narrower containers and never clips. Never wrap a HeroNumber in a fixed-width / overflow-hidden box. */
+function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, color, glow = false, group = true, className = "", style = {} }) {
   const animated = useCountUp(value);
-  const shown = typeof value === "number" ? animated.toFixed(decimals) : value;
-  const grad = "linear-gradient(175deg,#FFFFFF 8%," + A.b + " 55%," + A.a + ")";
+  let shown;
+  if (typeof value === "number") {
+    shown = group
+      ? animated.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : animated.toFixed(decimals);
+  } else shown = value;
+  const A = accent;
+  const inkColor = color || (A ? A.a : C.text);
+  // clamp(min, cqi-of-container, max): at a ~340px container the cqi term ≈ size; narrower shrinks it.
+  const fs = "clamp(" + Math.round(size * 0.42) + "px, " + (size / 3.4).toFixed(2) + "cqi, " + size + "px)";
   return (
-    <span className={"inline-flex items-baseline " + className} style={style}>
-      {prefix != null && <span style={{ fontFamily: F.mono, fontWeight: 600, fontSize: size * 0.3, color: C.dim, marginRight: 3 }}>{prefix}</span>}
-      <span style={{ fontFamily: F.disp, fontSize: size, lineHeight: 1.12, paddingTop: "0.06em", paddingRight: "0.14em", letterSpacing: -1, fontVariantNumeric: "tabular-nums", backgroundImage: grad, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", filter: glow ? "drop-shadow(0 0 22px " + A.a + "55)" : "none" }}>{shown}</span>
-      {suffix != null && <span style={{ fontFamily: F.disp, fontSize: size * 0.42, color: A.a, marginLeft: 4, paddingBottom: size * 0.06 }}>{suffix}</span>}
+    <span className={"inline-flex items-baseline min-w-0 max-w-full " + className} style={{ ...style }}>
+      {prefix != null && <span style={{ fontFamily: F.body, fontWeight: 700, fontSize: "calc(" + fs + " * 0.34)", color: C.dim, marginRight: 3 }}>{prefix}</span>}
+      <span style={{ fontFamily: F.disp, fontSize: fs, lineHeight: 0.92, letterSpacing: "0.005em", fontVariantNumeric: "tabular-nums", color: inkColor, whiteSpace: "nowrap", filter: glow && A ? "drop-shadow(0 0 18px " + A.a + "44)" : "none" }}>{shown}</span>
+      {suffix != null && <span style={{ fontFamily: F.body, fontWeight: 700, fontSize: "calc(" + fs + " * 0.30)", color: C.dim, marginLeft: 5, alignSelf: "flex-end", paddingBottom: "calc(" + fs + " * 0.12)" }}>{suffix}</span>}
     </span>
+  );
+}
+/* DotoTimer — dot-matrix LCD countdown for the rest timer. Doto renders each digit as a dot grid;
+   monospaced + tabular so 0:07 and 20:30 never shift or clip. Scales fluidly, orange when active. */
+function DotoTimer({ text, size = 48, color, className = "", style = {} }) {
+  const fs = "clamp(" + Math.round(size * 0.6) + "px, " + (size / 3.4).toFixed(2) + "cqi, " + size + "px)";
+  return (
+    <span className={"inline-block " + className} style={{ fontFamily: F.timer, fontWeight: 700, fontSize: fs, lineHeight: 1, letterSpacing: "0.06em", fontVariantNumeric: "tabular-nums", color: color || C.text, whiteSpace: "nowrap", ...style }}>{text}</span>
+  );
+}
+/* Dev-only clip test matrix (visit #numtest). Renders every hero figure across the required value
+   range and both card widths so truncation is caught at the component level, not the value. */
+function NumTest() {
+  const A = ACCENTS.ember;
+  const vals = [9, 42, 250, 8640, 199999];
+  const Card = ({ children, half }) => (
+    <div className="liquid-glass rounded-2xl p-4" style={{ width: half ? "48%" : "100%", overflow: "hidden" }}>{children}</div>
+  );
+  return (
+    <div className="min-h-screen w-full flex justify-center" style={{ background: "#0A0A0C", fontFamily: F.body, color: C.onBg }}>
+      <div className="w-full p-4" style={{ maxWidth: 480 }}>
+        <div style={{ fontFamily: F.disp, fontSize: 34, textTransform: "uppercase", color: C.onBg, marginBottom: 12 }}>Clip Test Matrix</div>
+        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.onBgDim, marginBottom: 16 }}>Every figure must sit fully inside its card — no right/top truncation.</div>
+
+        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.onBgDim, letterSpacing: 2, marginBottom: 8 }}>FULL-WIDTH HERO (size 60)</div>
+        <div className="flex flex-col gap-2 mb-6">
+          {vals.map(v => <Card key={v}><HeroNumber value={v} size={60} suffix="kg" /></Card>)}
+        </div>
+
+        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.onBgDim, letterSpacing: 2, marginBottom: 8 }}>BENTO HALF-WIDTH (size 48)</div>
+        <div className="flex flex-wrap gap-2 mb-6" style={{ justifyContent: "space-between" }}>
+          {vals.map(v => <Card key={v} half><div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, marginBottom: 4 }}>LABEL</div><HeroNumber value={v} size={48} /><div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, marginTop: 4 }}>OF 200,000</div></Card>)}
+        </div>
+
+        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.onBgDim, letterSpacing: 2, marginBottom: 8 }}>ACCENT + DECIMAL</div>
+        <div className="flex gap-2 mb-6">
+          <Card half><HeroNumber value={80.7} decimals={1} size={48} suffix="kg" /></Card>
+          <Card half><HeroNumber value={199999} size={48} accent={A} glow /></Card>
+        </div>
+
+        <div style={{ fontFamily: F.mono, fontSize: 10, color: C.onBgDim, letterSpacing: 2, marginBottom: 8 }}>DOTO TIMER</div>
+        <div className="flex gap-2">
+          <Card half><DotoTimer text="0:07" size={54} color={A.a} /></Card>
+          <Card half><DotoTimer text="20:30" size={54} /></Card>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1061,7 +1123,7 @@ function MuscleBar({ label, color, value, target, focus }) {
   return (
     <div className="py-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="flex items-center gap-1.5 text-sm font-semibold">
+        <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: C.text }}>
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
           {label}{focus && <span aria-label="Focus muscle">🎯</span>}
         </span>
@@ -1131,9 +1193,9 @@ function Onboarding({ A, onDone }) {
 
   const inputStyle = { background: C.card, border: "1px solid " + C.line, color: C.text, fontSize: 16, fontFamily: F.body };
   const Opt = ({ k, v, title, sub }) => (
-    <button onClick={() => set(k, v)} className="w-full text-left rounded-xl px-4 py-3.5 mb-2 transition-colors"
-      style={{ background: p[k] === v ? A.a + "1F" : C.card, border: "1px solid " + (p[k] === v ? A.a : C.line) }}>
-      <div className="font-semibold" style={{ fontSize: 15 }}>{title}</div>
+    <button onClick={() => set(k, v)} className="w-full text-left rounded-2xl px-4 py-3.5 mb-2 transition-colors"
+      style={{ background: C.card, border: "1px solid " + (p[k] === v ? A.a : "rgba(0,0,0,0.06)"), boxShadow: p[k] === v ? "0 0 0 1px " + A.a + ", 0 8px 22px -10px " + A.a + "66" : SHADOW.card }}>
+      <div className="font-semibold" style={{ fontSize: 15, color: C.text }}>{title}</div>
       {sub && <div className="text-sm mt-0.5" style={{ color: C.dim }}>{sub}</div>}
     </button>
   );
@@ -1163,7 +1225,7 @@ function Onboarding({ A, onDone }) {
         {step > 0 && <button onClick={() => setStep(step - 1)} aria-label="Back" className="p-1.5 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }}><ChevronLeft size={16} color={C.dim} /></button>}
         <div className="flex gap-1.5 flex-1">
           {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
-            <div key={i} className="h-1 flex-1 rounded-full transition-colors" style={{ background: i <= step ? A.a : C.line }} />
+            <div key={i} className="h-1 flex-1 rounded-full transition-colors" style={{ background: i <= step ? A.a : "rgba(255,255,255,0.14)" }} />
           ))}
         </div>
       </div>
@@ -1438,13 +1500,13 @@ function Heat30({ dates, color, label, foot, sub }) {
     const d = new Date(); d.setDate(d.getDate() - (29 - i)); return dates.has(d.toDateString());
   });
   return (
-    <div className="flex-1 rounded-2xl p-3.5" style={{ background: C.card, border: "1px solid " + C.line }}>
+    <div className="liquid-glass flex-1 rounded-3xl p-3.5">
       <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5 }}>{label}</div>
       <div style={{ fontFamily: F.mono, fontSize: 8, color: C.faint }}>LAST 30 DAYS</div>
       <div className="grid grid-cols-10 gap-1 mt-2 mb-2.5" aria-hidden="true">
-        {cells.map((on, i) => <span key={i} className="rounded-sm" style={{ height: 11, background: on ? color : "#ffffff10" }} />)}
+        {cells.map((on, i) => <span key={i} className="rounded-sm" style={{ height: 11, background: on ? color : C.card2 }} />)}
       </div>
-      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 19, lineHeight: 1 }}>{foot} <span style={{ fontSize: 11, color: C.dim, fontWeight: 600 }}>{sub}</span></div>
+      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 20, lineHeight: 1, color: C.text }}>{foot} <span style={{ fontSize: 11, color: C.dim, fontWeight: 600 }}>{sub}</span></div>
     </div>
   );
 }
@@ -1989,7 +2051,7 @@ export default function BurnLabApp() {
   const photoSection = (
     <>
       <SectionLabel>PROGRESS PHOTOS</SectionLabel>
-      <div className="rounded-2xl p-4 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
+      <div className="liquid-glass rounded-3xl p-4 mb-5">
         {photos.length >= 2 && (
           <div className="grid grid-cols-2 gap-2 mb-3">
             {[photos[0], photos[photos.length - 1]].map((p, i) => (
@@ -2026,9 +2088,10 @@ export default function BurnLabApp() {
   );
 
   /* ================= RENDER ================= */
+  if (typeof window !== "undefined" && window.location.hash === "#numtest") return <NumTest />;
   return (
-    <div className="min-h-screen w-full flex justify-center" style={{ background: "#000000", fontFamily: F.body, color: C.text }}>
-      <div className="w-full relative flex flex-col bl-grain" style={{ maxWidth: 480, background: C.bg, minHeight: "100vh", borderLeft: "1px solid " + C.line, borderRight: "1px solid " + C.line, isolation: "isolate" }}>
+    <div className="min-h-screen w-full flex justify-center" style={{ background: "#000000", fontFamily: F.body, color: C.onBg }}>
+      <div className="w-full relative flex flex-col" style={{ maxWidth: 480, background: C.bg, minHeight: "100vh", borderLeft: "1px solid " + C.onLine, borderRight: "1px solid " + C.onLine, isolation: "isolate" }}>
         <input ref={fileRef} type="file" accept="image/*" onChange={onPickPhoto} style={{ display: "none" }} aria-hidden="true" />
         <input ref={importRef} type="file" accept="application/json,.json" onChange={onImportFile} style={{ display: "none" }} aria-hidden="true" />
 
@@ -2062,142 +2125,132 @@ export default function BurnLabApp() {
               {/* ================= HOME ================= */}
               {tab === "home" && (
                 <div className="bl-fade">
-                  {/* greeting — big editorial */}
-                  <div className="mb-1">
-                    <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 3 }}>GOOD {greet} · {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
-                    <div style={{ fontFamily: F.disp, fontSize: 40, lineHeight: 1.04, letterSpacing: -1, textTransform: "uppercase", marginTop: 4 }}>{firstName || "Athlete"}</div>
+                  {/* greeting — on the black canvas, light ink, ultra-heavy Anton */}
+                  <div className="mb-5">
+                    <div style={{ fontFamily: F.mono, fontSize: 10, color: C.onBgFaint, letterSpacing: 3 }}>GOOD {greet} · {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
+                    <div style={{ fontFamily: F.disp, fontSize: 48, lineHeight: 0.9, letterSpacing: "0.01em", textTransform: "uppercase", marginTop: 6, color: C.onBg }}>{firstName || "Athlete"}</div>
                   </div>
 
-                  {/* weekly burn — signature HeroArc moment, full-bleed on black */}
+                  {/* bento dashboard — white cards on black: tiny title, micro bar, one huge number, OF-X */}
                   {(() => {
                     const goalSessions = PER_WEEK[data.program] || 3;
-                    const pct = Math.min(100, Math.round((workoutsThisWeek / goalSessions) * 100));
-                    const weekTonnage = data.history.filter(h => new Date(h.date).getTime() > Date.now() - 7 * 864e5)
-                      .reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.reduce((x, s) => x + s.w * s.r, 0), 0), 0);
-                    const weekSets = data.history.filter(h => new Date(h.date).getTime() > Date.now() - 7 * 864e5)
-                      .reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.length, 0), 0);
-                    const heroStats = [
-                      { label: "SETS", val: weekSets },
-                      { label: "KG LIFTED", val: fmtNum(Math.round(weekTonnage)) },
-                      ...(data.profile && data.profile.targets ? [{ label: "KCAL LEFT", val: fmtNum(Math.max(0, data.profile.targets.goal - eatenToday)) }] : []),
+                    const pct = goalSessions ? Math.min(1, workoutsThisWeek / goalSessions) : 0;
+                    const inWeek = h => new Date(h.date).getTime() > Date.now() - 7 * 864e5;
+                    const weekTonnage = Math.round(data.history.filter(inWeek).reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.reduce((x, s) => x + s.w * s.r, 0), 0), 0));
+                    const weekSets = data.history.filter(inWeek).reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.length, 0), 0);
+                    const hasT = data.profile && data.profile.targets;
+                    const kcalGoal = hasT ? data.profile.targets.goal : null;
+                    const kcalLeft = hasT ? Math.max(0, kcalGoal - eatenToday) : null;
+                    const cards = [
+                      { key: "burn", title: "WEEKLY BURN", value: workoutsThisWeek, of: "OF " + goalSessions + " SESSIONS", pct },
+                      { key: "sets", title: "SETS THIS WK", value: weekSets, of: weekAgg.setsT ? "OF " + weekAgg.setsT + " TARGET" : "LOGGED", pct: weekAgg.setsT ? Math.min(1, weekAgg.sets / weekAgg.setsT) : null },
+                      { key: "tonnage", title: "TONNAGE", value: weekTonnage, suffix: "kg", of: "THIS WEEK", pct: null },
+                      hasT
+                        ? { key: "fuel", title: "KCAL LEFT", value: kcalLeft, of: "OF " + fmtNum(kcalGoal), pct: Math.min(1, eatenToday / kcalGoal), go: () => setTab("fuel") }
+                        : { key: "fuel", title: "NUTRITION", value: "—", of: "SET UP IN FUEL", pct: null, go: () => setTab("fuel") },
+                      { key: "tro", title: "TROPHIES", value: troph.filter(t => t.done).length, of: "OF " + troph.length + " UNLOCKED", pct: troph.length ? troph.filter(t => t.done).length / troph.length : 0, go: () => setTab("trophies") },
+                      { key: "hist", title: "HISTORY", value: data.history.length, of: "WORKOUTS LOGGED", pct: null, go: () => setTab("progress") },
                     ];
                     return (
-                      <div className="mb-8 mt-2">
-                        <div className="bl-rise">
-                          <HeroArc value={pct} max={100} size={244} unit="%" label="WEEKLY BURN" sublabel={workoutsThisWeek + " / " + goalSessions + " SESSIONS"} accent={A} />
-                        </div>
-                        <div className="grid mt-6" style={{ gridTemplateColumns: "repeat(" + heroStats.length + ",1fr)" }}>
-                          {heroStats.map((s, i) => (
-                            <div key={s.label} className="text-center px-2" style={{ borderLeft: i > 0 ? "1px solid " + C.line : "none" }}>
-                              <div style={{ fontFamily: F.disp, fontSize: 30, letterSpacing: -0.5, color: C.text, lineHeight: 1.06, fontVariantNumeric: "tabular-nums" }}>{s.val}</div>
-                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 2, marginTop: 5 }}>{s.label}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* week strip */}
-                  {(() => {
-                    const monday = new Date(); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-                    const trained = new Set(data.history.map(h => new Date(h.date).toDateString()));
-                    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
-                    return (
-                      <div className="grid grid-cols-7 gap-1.5 mb-6">
-                        {days.map((d, i) => {
-                          const isToday = d.toDateString() === new Date().toDateString();
-                          const did = trained.has(d.toDateString());
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        {cards.map((c, i) => {
+                          const Tag = c.go ? "button" : "div";
                           return (
-                            <div key={i} className="bl-spring rounded-2xl py-2.5 text-center hover:-translate-y-1"
-                              style={did
-                                ? { background: AGV, border: "1px solid transparent", boxShadow: "0 6px 18px -6px " + A.a + "88" }
-                                : { background: "rgba(24,24,27,0.20)", border: "1px solid " + (isToday ? A.a : "transparent") }}>
-                              <div style={{ fontFamily: F.mono, fontSize: 8.5, letterSpacing: 1, color: did ? "#000" : C.faint }}>{"MTWTFSS"[i]}</div>
-                              <div style={{ fontFamily: F.disp, fontSize: 16, color: did ? "#000" : isToday ? C.text : C.dim }}>{d.getDate()}</div>
-                              {did && <Check size={10} color="#000" className="mx-auto" strokeWidth={3} />}
-                            </div>
+                            <Tag key={c.key} onClick={c.go ? () => { if (data.settings.vibrate) haptic("tap"); c.go(); } : undefined}
+                              className={"liquid-glass bl-stagger rounded-3xl p-4 text-left " + (c.go ? "bl-spring active:scale-[0.97]" : "")}
+                              style={{ "--i": i }}>
+                              <div className="flex items-center justify-between mb-2" style={{ minHeight: 14 }}>
+                                <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 2 }}>{c.title}</span>
+                                {c.go && <ArrowUpRight size={13} color={C.faint} />}
+                              </div>
+                              {c.pct != null && (
+                                <div className="h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: C.card2 }}>
+                                  <div className="h-full rounded-full" style={{ width: Math.round(c.pct * 100) + "%", background: C.text }} />
+                                </div>
+                              )}
+                              <HeroNumber value={c.value} suffix={c.suffix} size={44} />
+                              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1, marginTop: 5 }}>{c.of}</div>
+                            </Tag>
                           );
                         })}
                       </div>
                     );
                   })()}
 
-                  {/* photo reminder */}
+                  {/* week strip — white card, trained days filled orange */}
+                  {(() => {
+                    const monday = new Date(); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+                    const trained = new Set(data.history.map(h => new Date(h.date).toDateString()));
+                    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+                    return (
+                      <div className="liquid-glass rounded-3xl p-3 mb-3">
+                        <div className="grid grid-cols-7 gap-1.5">
+                          {days.map((d, i) => {
+                            const isToday = d.toDateString() === new Date().toDateString();
+                            const did = trained.has(d.toDateString());
+                            return (
+                              <div key={i} className="rounded-2xl py-2 text-center"
+                                style={did
+                                  ? { background: AGV, border: "1px solid transparent", boxShadow: "0 6px 16px -8px " + A.a + "aa" }
+                                  : { background: C.card2, border: "1px solid " + (isToday ? A.a : "transparent") }}>
+                                <div style={{ fontFamily: F.mono, fontSize: 8.5, letterSpacing: 1, color: did ? "#fff" : C.faint }}>{"MTWTFSS"[i]}</div>
+                                <div style={{ fontFamily: F.disp, fontSize: 17, lineHeight: 1.1, color: did ? "#fff" : isToday ? C.text : C.dim }}>{d.getDate()}</div>
+                                {did ? <Check size={10} color="#fff" className="mx-auto" strokeWidth={3} /> : <div style={{ height: 10 }} />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* photo reminder — white card */}
                   {photoIsDue && data.settings.photoCadence !== "off" && (
-                    <button onClick={() => fileRef.current && fileRef.current.click()} className="w-full rounded-2xl p-4 mb-4 flex items-center gap-3 text-left" style={{ background: C.blue + "14", border: "1px solid " + C.blue + "44" }}>
-                      <Camera size={19} color={C.blue} className="shrink-0" />
-                      <div className="flex-1">
-                        <div className="font-bold text-sm">{photos.length ? "Progress photo due" : "Take your first progress photo"}</div>
+                    <button onClick={() => fileRef.current && fileRef.current.click()} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
+                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 38, height: 38, background: A.a + "1A" }}><Camera size={18} color={A.a} /></span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm" style={{ color: C.text }}>{photos.length ? "Progress photo due" : "Take your first progress photo"}</div>
                         <div className="text-xs" style={{ color: C.dim }}>Same spot, same light, same pose - future you will thank you.</div>
                       </div>
-                      <span className="text-xs font-bold px-3 py-1.5 rounded-lg shrink-0" style={{ background: C.blue, color: "#fff" }}>Snap</span>
+                      <span className="text-xs font-bold px-3 py-1.5 rounded-full shrink-0" style={{ background: AG, color: "#0D0E11" }}>Snap</span>
                     </button>
                   )}
 
-                  {/* weigh-in prompt */}
+                  {/* weigh-in prompt — white card */}
                   {!weighedToday && data.profile && (
-                    <button onClick={() => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); }} className="w-full rounded-2xl p-4 mb-4 flex items-center gap-3 text-left" style={{ background: C.green + "12", border: "1px solid " + C.green + "3D" }}>
-                      <Weight size={19} color={C.green} className="shrink-0" />
-                      <div className="flex-1">
-                        <div className="font-bold text-sm">Log today's weigh-in</div>
+                    <button onClick={() => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); }} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
+                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 38, height: 38, background: A.a + "1A" }}><Weight size={18} color={A.a} /></span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm" style={{ color: C.text }}>Log today's weigh-in</div>
                         <div className="text-xs" style={{ color: C.dim }}>{weighStreak(weights) > 0 ? weighStreak(weights) + "-day streak going - keep it alive" : "Morning, post-bathroom, before food = most consistent"}</div>
                       </div>
-                      <span className="text-xs font-bold px-3 py-1.5 rounded-lg shrink-0" style={{ background: C.green, color: "#fff" }}>Log</span>
+                      <span className="text-xs font-bold px-3 py-1.5 rounded-full shrink-0" style={{ background: AG, color: "#0D0E11" }}>Log</span>
                     </button>
                   )}
 
-                  {/* next session - the app's one clear action, sized and lit up to feel like it */}
+                  {/* next session — the one clear action, prominent white card, orange Start button */}
                   {program ? (
-                    <div className="relative overflow-hidden rounded-3xl p-6 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
-                      <div className="relative">
-                        <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 3 }}>UP NEXT</div>
-                        <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 46, lineHeight: 1, letterSpacing: -1, textTransform: "uppercase", marginTop: 2 }}>{program.days[nextDayIdx].name}</div>
-                        <div className="text-sm mt-1" style={{ color: C.dim }}>{program.days[nextDayIdx].items.length} exercises · {program.days[nextDayIdx].items.reduce((a, i) => a + i.sets, 0)} working sets</div>
-                        {session ? (
-                          <button onClick={() => setTab("train")} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm" style={{ background: C.card, border: "1px solid " + A.a, color: A.a }}>
-                            <Play size={15} /> Resume in progress
-                          </button>
-                        ) : (
-                          <GradBtn A={A} onClick={() => startSession(data.program, program.days[nextDayIdx])} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-base" style={{ boxShadow: "0 10px 32px -6px " + A.a + "88" }}>
-                            <Play size={18} fill="#0D0E11" /> Start Workout
-                          </GradBtn>
-                        )}
-                      </div>
+                    <div className="liquid-glass rounded-3xl p-6 mb-3">
+                      <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 3 }}>UP NEXT</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 44, lineHeight: 0.92, letterSpacing: "0.01em", textTransform: "uppercase", marginTop: 6, color: C.text }}>{program.days[nextDayIdx].name}</div>
+                      <div className="text-sm mt-2" style={{ color: C.dim }}>{program.days[nextDayIdx].items.length} exercises · {program.days[nextDayIdx].items.reduce((a, i) => a + i.sets, 0)} working sets</div>
+                      {session ? (
+                        <button onClick={() => setTab("train")} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm" style={{ background: C.card2, border: "1px solid " + A.a, color: A.a }}>
+                          <Play size={15} /> Resume in progress
+                        </button>
+                      ) : (
+                        <GradBtn A={A} onClick={() => startSession(data.program, program.days[nextDayIdx])} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-base" style={{ boxShadow: "0 10px 32px -6px " + A.a + "88" }}>
+                          <Play size={18} fill="#0D0E11" /> Start Workout
+                        </GradBtn>
+                      )}
                     </div>
                   ) : (
-                    <div className="rounded-3xl p-5 mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
-                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 28 }}>PICK YOUR SPLIT</div>
+                    <div className="liquid-glass rounded-3xl p-5 mb-3">
+                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 30, textTransform: "uppercase", color: C.text }}>PICK YOUR SPLIT</div>
                       <p className="text-sm mt-1" style={{ color: C.dim }}>Choose a training program to unlock your first session.</p>
                       <GradBtn A={A} onClick={() => setTab("train")} className="mt-4 px-5 py-2.5 rounded-full text-sm">Choose a program</GradBtn>
                     </div>
                   )}
-
-                  {/* dashboard card grid — tappable destinations (Nippard-style), each driving into detail.
-                      Trophies lives here now that it's off the 5-slot nav. */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {[
-                      { key: "tro", label: "TROPHIES", val: troph.filter(t => t.done).length, sub: "of " + troph.length + " unlocked", icon: Trophy, go: () => setTab("trophies") },
-                      { key: "rec", label: "RECORDS", val: recentRecords.length, sub: recentRecords.length ? "new this month" : "none this month", icon: Award, go: () => setTab("progress") },
-                      { key: "fuel", label: "NUTRITION", val: (data.profile && data.profile.targets) ? Math.max(0, data.profile.targets.goal - eatenToday) : "—", sub: (data.profile && data.profile.targets) ? "kcal left today" : "set up in fuel", icon: Utensils, go: () => setTab("fuel") },
-                      { key: "hist", label: "HISTORY", val: data.history.length, sub: "workouts logged", icon: Dumbbell, go: () => setTab("progress") },
-                    ].map((c, i) => {
-                      const Icon = c.icon;
-                      return (
-                        <button key={c.key} onClick={() => { if (data.settings.vibrate) haptic("tap"); c.go(); }}
-                          className="liquid-glass bl-spring bl-stagger relative overflow-hidden text-left active:scale-[0.97] hover:scale-[1.01] hover:border-white/20"
-                          style={{ "--i": i, borderRadius: 26, padding: SPACE[6] }}>
-                          <div className="flex items-start justify-between mb-3">
-                            <span className="flex items-center justify-center rounded-full" style={{ width: 36, height: 36, background: A.a + "1A", border: "1px solid " + A.a + "33" }}><Icon size={16} color={A.a} /></span>
-                            <ArrowUpRight size={9} color={C.text} style={{ opacity: 0.2 }} />
-                          </div>
-                          <div style={{ fontFamily: F.disp, fontSize: 36, lineHeight: 1.06, letterSpacing: -0.5 }}>{typeof c.val === "number" ? fmtNum(c.val) : c.val}</div>
-                          <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 2, marginTop: 6 }}>{c.label}</div>
-                          <div className="text-xs truncate" style={{ color: C.dim, marginTop: 1 }}>{c.sub}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
 
                   {/* muscle-map banner — opens the flagship full-screen body diagram */}
                   {(() => {
@@ -2205,15 +2258,14 @@ export default function BurnLabApp() {
                     const dormant = Object.entries(heatMap).filter(([, v]) => v.daysSince === Infinity || v.daysSince > 10).length;
                     return (
                       <button onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab("muscles"); }}
-                        className="w-full relative overflow-hidden text-left transition-transform active:scale-[0.98] mb-4"
-                        style={{ background: C.card, border: "1px solid " + C.line, borderRadius: 24, padding: SPACE[6] }}>
-                        <div className="relative flex items-center justify-between gap-3">
-                          <div>
+                        className="liquid-glass bl-spring active:scale-[0.98] w-full text-left mb-3 rounded-3xl p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
                             <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>MUSCLE MAP</div>
-                            <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 26, textTransform: "uppercase", lineHeight: 1.05 }}>What's fired up</div>
-                            <div className="text-xs mt-1" style={{ color: C.dim }}>{hot} firing hot · {dormant} dormant · tap to inspect</div>
+                            <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 28, textTransform: "uppercase", lineHeight: 0.95, color: C.text, marginTop: 3 }}>What's fired up</div>
+                            <div className="text-xs mt-1.5" style={{ color: C.dim }}>{hot} firing hot · {dormant} dormant · tap to inspect</div>
                           </div>
-                          <div className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 46, height: 46, background: A.a + "1F", border: "1px solid " + A.a + "44" }}><ArrowUpRight size={20} color={A.a} /></div>
+                          <div className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 44, height: 44, background: A.a + "14" }}><ArrowUpRight size={20} color={A.a} /></div>
                         </div>
                       </button>
                     );
@@ -2221,7 +2273,7 @@ export default function BurnLabApp() {
 
                   {/* weekly targets trio - Apple Activity-style concentric rings */}
                   <SectionLabel>THIS WEEK VS TARGET</SectionLabel>
-                  <div className="rounded-3xl px-3 py-5 mb-4" style={{ background: C.card, border: "1px solid " + C.line, boxShadow: SHADOW.card }}>
+                  <div className="liquid-glass rounded-3xl px-3 py-5 mb-3">
                     <ActivityRings rings={[
                       { label: "Sets", color: A.a, value: weekAgg.sets, target: weekAgg.setsT },
                       { label: "Muscles", color: C.blue, value: weekAgg.muscles, target: weekAgg.musclesT },
@@ -2239,7 +2291,7 @@ export default function BurnLabApp() {
                     return (
                       <>
                         <SectionLabel>{showAllMuscles ? "MUSCLES THIS WEEK" : "TOP 3 IN FOCUS"}</SectionLabel>
-                        <div className="rounded-2xl px-4 py-1 mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
+                        <div className="liquid-glass rounded-3xl px-4 py-1 mb-3">
                           {!showAllMuscles ? (
                             top3.map(r => <MuscleBar key={r.m} label={r.m} color={MUSCLES[r.m]} value={r.value} target={r.target} focus={r.focus} />)
                           ) : (
@@ -2261,12 +2313,12 @@ export default function BurnLabApp() {
                     );
                   })()}
 
-                  {/* lab note */}
-                  <div className="rounded-2xl p-4 mb-2 flex gap-3" style={{ background: A.a + "12", border: "1px solid " + A.a + "3D" }}>
+                  {/* lab note — white card with an orange accent rail */}
+                  <div className="liquid-glass rounded-3xl p-4 mb-2 flex gap-3" style={{ borderLeft: "3px solid " + A.a }}>
                     <Info size={18} color={A.a} className="shrink-0 mt-0.5" />
                     <div>
                       <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 1.5 }}>LAB NOTE</div>
-                      <p className="text-sm mt-1">{scienceTip}</p>
+                      <p className="text-sm mt-1" style={{ color: C.text }}>{scienceTip}</p>
                     </div>
                   </div>
                 </div>
@@ -2283,7 +2335,7 @@ export default function BurnLabApp() {
                     </div>
                   </div>
 
-                  <div className="rounded-3xl p-6 mt-5 mb-5 relative overflow-hidden" style={{ background: C.card, border: "1px solid " + C.line }}>
+                  <div className="liquid-glass rounded-3xl p-6 mt-5 mb-5 relative overflow-hidden">
                     <div className="relative">
                       <AnatomyBody fem={data.profile && data.profile.sex === "f"} mode="heat" heatMap={heatMap} size={260} />
                       <div className="flex items-center justify-center gap-2 mt-4">
@@ -2297,7 +2349,7 @@ export default function BurnLabApp() {
 
                   {/* ranked breakdown — Nippard "set levels" style list */}
                   <SectionLabel>THIS WEEK BY MUSCLE</SectionLabel>
-                  <div className="rounded-2xl overflow-hidden mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
+                  <div className="liquid-glass rounded-3xl overflow-hidden mb-4">
                     {Object.keys(MUSCLES)
                       .map(m => ({ m, ...heatMap[m], sets: Math.round(week[m] || 0), target: muscleTarget(m) }))
                       .sort((a, b) => b.ratio - a.ratio)
@@ -2332,12 +2384,10 @@ export default function BurnLabApp() {
                       const on = data.program === k;
                       return (
                         <button key={k} onClick={() => { if (data.settings.vibrate) haptic("tap"); save({ ...data, program: k }); }}
-                          className={"bl-spring rounded-2xl px-2 py-4 text-center active:scale-[0.97] " + (on ? "liquid-glass-active" : "")}
-                          style={on
-                            ? { transform: "scale(1.03)", borderColor: A.a + "cc", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.22), 0 0 20px -2px " + A.a + "55" }
-                            : { background: "rgba(24,24,27,0.30)", border: "1px solid transparent" }}>
-                          <div style={{ fontFamily: F.disp, fontSize: 17, lineHeight: 1, letterSpacing: -0.5, color: on ? C.text : C.faint }}>{pr.name.toUpperCase()}</div>
-                          <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, marginTop: 4, color: on ? A.a : C.faint }}>{pr.freq}</div>
+                          className={"bl-spring rounded-2xl px-2 py-4 text-center active:scale-[0.97] " + (on ? "liquid-glass-active" : "liquid-glass")}
+                          style={on ? { transform: "scale(1.03)" } : {}}>
+                          <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 18, lineHeight: 1, textTransform: "uppercase", color: on ? C.text : C.dim }}>{pr.name.toUpperCase()}</div>
+                          <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, marginTop: 5, color: on ? A.a : C.faint }}>{pr.freq}</div>
                         </button>
                       );
                     })}
@@ -2345,13 +2395,13 @@ export default function BurnLabApp() {
 
                   {program ? (
                     <div key={data.program} className="bl-fade">
-                      <p className="text-sm mb-4" style={{ color: C.dim }}>{program.blurb}{gym !== "full" && " Exercises auto-adapt to your " + GYM_LABEL[gym].toLowerCase() + " setup."}</p>
+                      <p className="text-sm mb-4" style={{ color: C.onBgDim }}>{program.blurb}{gym !== "full" && " Exercises auto-adapt to your " + GYM_LABEL[gym].toLowerCase() + " setup."}</p>
                       {program.days.map((day, di) => (
-                        <div key={day.id} className={"bl-spring rounded-3xl mb-4 overflow-hidden " + (di === nextDayIdx ? "liquid-glass-active" : "liquid-glass")} style={di === nextDayIdx ? { borderColor: A.a + "66" } : {}}>
+                        <div key={day.id} className={"bl-spring rounded-3xl mb-4 overflow-hidden " + (di === nextDayIdx ? "liquid-glass-active" : "liquid-glass")}>
                           <div className="flex items-center justify-between px-4 pt-3.5">
                             <div>
                               <div className="flex items-center gap-2">
-                                <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, textTransform: "uppercase" }}>{day.name}</span>
+                                <span style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, textTransform: "uppercase", color: C.text }}>{day.name}</span>
                                 {di === nextDayIdx && <Chip color={A.a}>UP NEXT</Chip>}
                               </div>
                               <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{day.items.length} exercises · {day.items.reduce((a, i) => {
@@ -2374,7 +2424,7 @@ export default function BurnLabApp() {
                                 <div key={i} className="flex items-center justify-between py-1.5">
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: MUSCLES[EX[rid].muscle] }} />
-                                    <span className="text-sm truncate">{EX[rid].name}</span>
+                                    <span className="text-sm truncate" style={{ color: C.text }}>{EX[rid].name}</span>
                                     {rid !== it.ex && <Repeat size={11} color={C.faint} className="shrink-0" />}
                                     {focus && <Chip color={A.a}>🎯 FOCUS</Chip>}
                                   </div>
@@ -2463,7 +2513,7 @@ export default function BurnLabApp() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>EXERCISE {cur + 1} / {session.items.length}{it.focus ? " · 🎯 FOCUS" : ""}</div>
-                                <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 30, lineHeight: 1.05, textTransform: "uppercase" }}>{ex.name}</div>
+                                <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 30, lineHeight: 0.98, textTransform: "uppercase", color: C.text }}>{ex.name}</div>
                                 <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim, marginTop: 2 }}>{it.sets} × {it.lo}-{it.hi} @ RPE {it.rpe} · rest {Math.round(it.rest / 60)}m</div>
                               </div>
                               <Picto ex={ex} size={52} />
@@ -2496,7 +2546,7 @@ export default function BurnLabApp() {
                               const labelNo = isW ? "W" : workingNo;
                               const prevSet = !isW && prev ? prev.sets[workingNo - 1] : null;
                               const isFocus = i === focusIdx;
-                              const well = { fontSize: 16, height: 44, background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, color: s.done ? C.dim : C.text, fontFamily: F.mono, fontVariantNumeric: "tabular-nums" };
+                              const well = { fontSize: 16, height: 44, background: "#111113", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, color: s.done ? "#8A8A92" : "#FAFAFA", fontFamily: F.mono, fontVariantNumeric: "tabular-nums" };
                               return (
                                 <div key={i} className={"bl-spring grid gap-1.5 items-center px-2 py-2 my-1 " + (isFocus ? "liquid-glass-active " : "") + (s.done ? "bl-setdone" : "")}
                                   style={{ gridTemplateColumns: "26px 42px 1fr 1fr 50px 42px", borderRadius: 16, opacity: (isFocus || focusIdx === -1) ? 1 : 0.25 }}>
@@ -2512,7 +2562,7 @@ export default function BurnLabApp() {
                                     <span className="text-center" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>—</span>
                                   ) : (
                                     <select value={s.rpe} onChange={e => updateSet(cur, i, "rpe", parseFloat(e.target.value))} aria-label={"Set " + labelNo + " RPE"}
-                                      className="text-center" style={{ fontSize: 15, height: 44, background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 12, color: C.dim, fontFamily: F.mono }}>
+                                      className="text-center" style={{ fontSize: 15, height: 44, background: "#111113", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, color: "#E5E5E8", fontFamily: F.mono }}>
                                       {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(v => <option key={v} value={v}>{v}</option>)}
                                     </select>
                                   )}
@@ -2569,11 +2619,11 @@ export default function BurnLabApp() {
                 <div className="bl-fade">
                   <ScreenHead eyebrow="Today's intake" title="Fuel" />
                   {!data.profile || data.profile.skipped || !data.profile.targets ? (
-                    <div className="rounded-2xl p-6 text-center" style={{ background: C.card, border: "1px solid " + C.line }}>
+                    <div className="liquid-glass rounded-3xl p-6 text-center">
                       <Utensils size={26} color={C.faint} className="mx-auto mb-2" />
-                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22 }}>SET UP YOUR FUEL</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 24, textTransform: "uppercase", color: C.text }}>SET UP YOUR FUEL</div>
                       <p className="text-sm mt-1 mb-4" style={{ color: C.dim }}>Answer a two-minute questionnaire and BurnLab calculates your calories, macros and meal plan.</p>
-                      <GradBtn A={A} onClick={() => save({ ...data, profile: null })} className="px-5 py-2.5 rounded-xl text-sm">Start questionnaire</GradBtn>
+                      <GradBtn A={A} onClick={() => save({ ...data, profile: null })} className="px-5 py-2.5 rounded-full text-sm">Start questionnaire</GradBtn>
                     </div>
                   ) : (() => {
                     const t = data.profile.targets;
@@ -2581,9 +2631,9 @@ export default function BurnLabApp() {
                     const tot = mp.meals.reduce((a, m) => ({ kcal: a.kcal + m.kcal, p: a.p + m.p }), { kcal: 0, p: 0 });
                     return (
                       <>
-                        <div className="rounded-2xl p-4 mb-3 text-center" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid " + A.a + "44", boxShadow: SHADOW.card }}>
+                        <div className="liquid-glass rounded-3xl p-5 mb-3 text-center" style={{ borderTop: "2px solid " + A.a }}>
                           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>DAILY TARGET · {(GOAL_LABEL[data.profile.goal] || "").toUpperCase()}</div>
-                          <div className="flex justify-center my-0.5"><HeroNumber value={t.goal} size={46} accent={A} /></div>
+                          <div className="flex justify-center my-1"><HeroNumber value={t.goal} size={58} /></div>
                           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day · maintenance {fmtNum(t.maintain)} kcal</div>
                         </div>
                         <div className="grid grid-cols-3 gap-2.5 mb-4">
@@ -2601,13 +2651,13 @@ export default function BurnLabApp() {
                           const b = bmiOf(data.profile.weightKg, data.profile.heightCm);
                           const band = bmiBand(b);
                           return b ? (
-                            <div className="rounded-xl px-4 py-3 mb-4 flex items-center justify-between" style={{ background: C.card, border: "1px solid " + C.line }}>
+                            <div className="liquid-glass rounded-3xl px-4 py-3 mb-3 flex items-center justify-between">
                               <div>
                                 <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>BODY MASS INDEX</div>
-                                <div className="text-xs mt-0.5" style={{ color: C.faint }}>A blunt tool - it can't tell muscle from fat, so lifters often read "high".</div>
+                                <div className="text-xs mt-0.5" style={{ color: C.dim }}>A blunt tool - it can't tell muscle from fat, so lifters often read "high".</div>
                               </div>
                               <div className="text-right shrink-0 pl-3">
-                                <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1 }}>{b}</div>
+                                <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, lineHeight: 1, color: C.text }}>{b}</div>
                                 <div style={{ fontFamily: F.mono, fontSize: 9, color: band.color }}>{band.label.toUpperCase()}</div>
                               </div>
                             </div>
@@ -2618,10 +2668,10 @@ export default function BurnLabApp() {
                         <div className="flex items-center justify-between mb-3">
                           <SectionLabel>FOOD DIARY</SectionLabel>
                         </div>
-                        <div className="flex items-center justify-between rounded-2xl px-2 py-2 mb-3" style={{ background: C.card, border: "1px solid " + C.line }}>
+                        <div className="liquid-glass flex items-center justify-between rounded-2xl px-2 py-2 mb-3">
                           <button onClick={() => shiftFuelDate(-1)} className="p-2 rounded-xl" style={{ background: C.card2 }} aria-label="Previous day"><ChevronLeft size={15} color={C.dim} /></button>
                           <div className="text-center">
-                            <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 18, lineHeight: 1 }}>{fuelDate === dayKey(new Date()) ? "TODAY" : new Date(fuelDate + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
+                            <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 20, lineHeight: 1, color: C.text }}>{fuelDate === dayKey(new Date()) ? "TODAY" : new Date(fuelDate + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
                             {fuelDate !== dayKey(new Date()) && <button onClick={() => setFuelDate(dayKey(new Date()))} className="text-xs" style={{ color: A.a }}>back to today</button>}
                           </div>
                           <button onClick={() => shiftFuelDate(1)} disabled={fuelDate >= dayKey(new Date())} className="p-2 rounded-xl" style={{ background: C.card2, opacity: fuelDate >= dayKey(new Date()) ? 0.35 : 1 }} aria-label="Next day"><ChevronLeft size={15} color={C.dim} style={{ transform: "rotate(180deg)" }} /></button>
@@ -2629,29 +2679,28 @@ export default function BurnLabApp() {
 
                         {/* day summary */}
                         <div className="liquid-glass rounded-3xl p-5 mb-3">
-                          <div className="flex items-end justify-between">
-                            <div>
+                          <div className="flex items-end justify-between gap-3">
+                            <div className="min-w-0">
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>EATEN</div>
-                              <div style={{ fontFamily: F.disp, fontSize: 32, lineHeight: 1.06, letterSpacing: -0.5 }}>{fmtNum(Math.round(dayTotals.kcal))}<span style={{ fontSize: 13, color: C.dim }}> kcal</span></div>
+                              <HeroNumber value={Math.round(dayTotals.kcal)} suffix="kcal" size={38} />
                             </div>
-                            <div className="text-right">
+                            <div className="text-right min-w-0">
                               <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>REMAINING</div>
-                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} size={36} glow={true} accent={A} />
+                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} suffix="kcal" size={38} />
                             </div>
                           </div>
-                          {/* dual-layer glass pipe: translucent track + glowing orange liquid fill */}
-                          <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.6)" }}>
-                            <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: AG, boxShadow: "0 0 12px " + A.a + "cc, inset 0 1px 1px rgba(255,255,255,0.4)" }} />
+                          <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+                            <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: AG, boxShadow: "0 0 10px " + A.a + "aa" }} />
                           </div>
                           <div className="grid grid-cols-3 gap-3 mt-4">
-                            {[["PROTEIN", dayTotals.p, t.proteinG, "#F0603A"], ["CARBS", dayTotals.c, t.carbG, "#3D9BFF"], ["FAT", dayTotals.f, t.fatG, "#F2B928"]].map(([l, v, tg, col]) => (
+                            {[["PROTEIN", dayTotals.p, t.proteinG], ["CARBS", dayTotals.c, t.carbG], ["FAT", dayTotals.f, t.fatG]].map(([l, v, tg]) => (
                               <div key={l}>
                                 <div className="flex items-baseline justify-between">
                                   <span style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>{l}</span>
-                                  <span style={{ fontFamily: F.mono, fontSize: 10, fontVariantNumeric: "tabular-nums" }}>{Math.round(v)}<span style={{ color: C.faint }}>/{tg}g</span></span>
+                                  <span style={{ fontFamily: F.mono, fontSize: 10, color: C.text, fontVariantNumeric: "tabular-nums" }}>{Math.round(v)}<span style={{ color: C.faint }}>/{tg}g</span></span>
                                 </div>
-                                <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)", boxShadow: "inset 0 1px 1px rgba(0,0,0,0.6)" }}>
-                                  <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (v / tg) * 100) + "%", background: A.a, boxShadow: "0 0 8px " + col + "88" }} />
+                                <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+                                  <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (v / tg) * 100) + "%", background: A.a }} />
                                 </div>
                               </div>
                             ))}
@@ -2663,10 +2712,10 @@ export default function BurnLabApp() {
                           const items = dayEntries.filter(e => e.meal === slot);
                           const kc = items.reduce((a, e) => a + e.kcal, 0);
                           return (
-                            <div key={slot} className="rounded-2xl mb-2.5 overflow-hidden" style={{ background: C.card, border: "1px solid " + C.line }}>
+                            <div key={slot} className="liquid-glass rounded-3xl mb-2.5 overflow-hidden">
                               <div className="flex items-center justify-between px-4 py-3">
                                 <div>
-                                  <span className="font-bold text-sm">{label}</span>
+                                  <span className="font-bold text-sm" style={{ color: C.text }}>{label}</span>
                                   {kc > 0 && <span className="ml-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{fmtNum(Math.round(kc))} kcal</span>}
                                 </div>
                                 <button onClick={() => { setAddFor(slot); setAddStage("search"); }} aria-label={"Add food to " + label} className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ background: AG }}><Plus size={16} color="#0D0E11" strokeWidth={2.6} /></button>
@@ -2676,10 +2725,10 @@ export default function BurnLabApp() {
                                   {items.map(e2 => (
                                     <button key={e2.id} onClick={() => setEntryEdit(e2)} className="w-full flex items-center justify-between py-2 text-left transition-transform active:scale-[0.98]" style={{ borderBottom: "1px solid " + C.line + "88" }}>
                                       <div className="min-w-0">
-                                        <div className="text-sm truncate">{e2.name}</div>
+                                        <div className="text-sm truncate" style={{ color: C.text }}>{e2.name}</div>
                                         <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint }}>{e2.g ? e2.g + "g · " : ""}P{Math.round(e2.p)} C{Math.round(e2.c)} F{Math.round(e2.f)}</div>
                                       </div>
-                                      <span className="shrink-0 pl-2" style={{ fontFamily: F.mono, fontSize: 12 }}>{fmtNum(e2.kcal)}</span>
+                                      <span className="shrink-0 pl-2" style={{ fontFamily: F.mono, fontSize: 12, color: C.text }}>{fmtNum(e2.kcal)}</span>
                                     </button>
                                   ))}
                                 </div>
@@ -2690,26 +2739,26 @@ export default function BurnLabApp() {
                         <p className="text-xs mt-1 mb-4" style={{ color: C.faint }}>Built-in foods use typical values; worldwide search is powered by Open Food Facts (community data - double-check odd-looking numbers against the label). Logging works fully offline; anything you've logged stays searchable in Recents without signal.</p>
 
                         {/* meal ideas (collapsible) */}
-                        <button onClick={() => setShowIdeas(!showIdeas)} className="w-full flex items-center justify-between rounded-2xl px-4 py-3 mb-3" style={{ background: C.card, border: "1px solid " + C.line }}>
-                          <span className="font-bold text-sm">Meal ideas · {mp.label}</span>
+                        <button onClick={() => setShowIdeas(!showIdeas)} className="liquid-glass w-full flex items-center justify-between rounded-3xl px-4 py-3 mb-3">
+                          <span className="font-bold text-sm" style={{ color: C.text }}>Meal ideas · {mp.label}</span>
                           {showIdeas ? <ChevronUp size={16} color={C.dim} /> : <ChevronDown size={16} color={C.dim} />}
                         </button>
                         {showIdeas && (
                           <div className="bl-fade">
-                            <p className="text-sm mb-3" style={{ color: C.dim }}>{mp.note}</p>
+                            <p className="text-sm mb-3" style={{ color: C.onBgDim }}>{mp.note}</p>
                             {mp.meals.map((m, i) => (
-                              <div key={i} className="rounded-xl px-4 py-3 mb-2" style={{ background: C.card, border: "1px solid " + C.line }}>
+                              <div key={i} className="liquid-glass rounded-3xl px-4 py-3 mb-2">
                                 <div className="flex items-center justify-between">
                                   <span style={{ fontFamily: F.mono, fontSize: 9.5, color: A.a, letterSpacing: 1.5 }}>{m.t.toUpperCase()}</span>
                                   <div className="flex gap-1.5"><Chip>{m.kcal} KCAL</Chip><Chip color={MUSCLES.Chest}>{m.p}g P</Chip></div>
                                 </div>
-                                <div className="font-semibold text-sm mt-1">{m.n}</div>
+                                <div className="font-semibold text-sm mt-1" style={{ color: C.text }}>{m.n}</div>
                                 <div className="text-sm mt-0.5" style={{ color: C.dim }}>{m.d}</div>
                               </div>
                             ))}
-                            <div className="rounded-2xl p-4 flex gap-3" style={{ background: A.a + "12", border: "1px solid " + A.a + "3D" }}>
+                            <div className="liquid-glass rounded-3xl p-4 flex gap-3" style={{ borderLeft: "3px solid " + A.a }}>
                               <Info size={17} color={A.a} className="shrink-0 mt-0.5" />
-                              <p className="text-sm">Templates are a starting point - swap like-for-like foods and scale portions to hit your numbers. Drink 2-3L of water and aim for 25g+ of fibre daily. General guidance, not medical or dietetic advice.</p>
+                              <p className="text-sm" style={{ color: C.text }}>Templates are a starting point - swap like-for-like foods and scale portions to hit your numbers. Drink 2-3L of water and aim for 25g+ of fibre daily. General guidance, not medical or dietetic advice.</p>
                             </div>
                           </div>
                         )}
@@ -2813,7 +2862,7 @@ export default function BurnLabApp() {
                           <div className="flex gap-1 mt-1 mb-3">
                             {Object.keys(W_RANGES).map(r => (
                               <button key={r} onClick={() => setWeightRange(r)} className="flex-1 py-1.5 rounded-full text-xs font-bold transition-colors"
-                                style={{ background: weightRange === r ? C.text : C.card2, color: weightRange === r ? C.bg : C.dim, border: "1px solid " + (weightRange === r ? C.text : C.line) }}>{r}</button>
+                                style={{ background: weightRange === r ? C.text : C.card2, color: weightRange === r ? "#fff" : C.dim, border: "1px solid " + (weightRange === r ? C.text : C.line) }}>{r}</button>
                             ))}
                           </div>
                           <div className="flex items-center justify-between">
@@ -2941,7 +2990,7 @@ export default function BurnLabApp() {
                   </div>
 
                   <SectionLabel>MUSCLE HEAT</SectionLabel>
-                  <div className="rounded-3xl p-4 mb-4" style={{ background: C.card, border: "1px solid " + C.line, borderTop: "1px solid #ffffff14", boxShadow: SHADOW.hero }}>
+                  <div className="liquid-glass rounded-3xl p-4 mb-4">
                     <AnatomyBody fem={data.profile && data.profile.sex === "f"} mode="heat" heatMap={heatMap} size={190} />
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <span style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>DORMANT</span>
@@ -2953,9 +3002,9 @@ export default function BurnLabApp() {
 
                   {data.history.length === 0 ? (
                     <>
-                      <div className="rounded-2xl p-6 text-center mb-4" style={{ background: C.card, border: "1px solid " + C.line }}>
+                      <div className="liquid-glass rounded-3xl p-6 text-center mb-4">
                         <TrendingUp size={28} color={C.faint} className="mx-auto mb-2" />
-                        <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22 }}>NO DATA YET</div>
+                        <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 24, textTransform: "uppercase", color: C.text }}>NO DATA YET</div>
                         <p className="text-sm mt-1" style={{ color: C.dim }}>Finish your first workout and your strength curves start here.</p>
                       </div>
                       <SectionLabel>PROGRESS PHOTOS</SectionLabel>
@@ -2977,7 +3026,7 @@ export default function BurnLabApp() {
                           return { d: dayLabel(h.date), v: Math.round(Math.max(...e.sets.map(s => e1rm(s.w, s.r))) * 10) / 10 };
                         });
                         return (
-                          <div className="rounded-2xl p-3 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
+                          <div className="liquid-glass rounded-3xl p-3 mb-5">
                             <ResponsiveContainer width="100%" height={190}>
                               <LineChart data={pts} margin={{ top: 10, right: 10, left: -18, bottom: 0 }}>
                                 <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
@@ -3051,7 +3100,7 @@ export default function BurnLabApp() {
                             <div className="flex gap-1 mt-2">
                               {Object.keys(W_RANGES).map(r => (
                                 <button key={r} onClick={() => setProgRange(r)} className="flex-1 py-1.5 rounded-full text-xs font-bold transition-colors"
-                                  style={{ background: progRange === r ? C.text : C.card2, color: progRange === r ? C.bg : C.dim, border: "1px solid " + (progRange === r ? C.text : C.line) }}>{r}</button>
+                                  style={{ background: progRange === r ? C.text : C.card2, color: progRange === r ? "#fff" : C.dim, border: "1px solid " + (progRange === r ? C.text : C.line) }}>{r}</button>
                               ))}
                             </div>
                           </div>
@@ -3072,13 +3121,13 @@ export default function BurnLabApp() {
                         const rows = Object.entries(agg).map(([id, v]) => ({ id, v: Math.round(v) })).sort((a, b) => b.v - a.v).slice(0, 5);
                         const max = rows.length ? rows[0].v : 1;
                         const unit = isVol ? "kg" : "sets";
-                        if (!rows.length) return <div className="rounded-2xl p-5 mb-5 text-center text-sm" style={{ background: C.card, border: "1px solid " + C.line, color: C.dim }}>No movements logged in this range.</div>;
+                        if (!rows.length) return <div className="liquid-glass rounded-3xl p-5 mb-5 text-center text-sm" style={{ color: C.dim }}>No movements logged in this range.</div>;
                         return (
-                          <div className="rounded-2xl p-4 mb-5" style={{ background: C.card, border: "1px solid " + C.line }}>
+                          <div className="liquid-glass rounded-3xl p-4 mb-5">
                             {rows.map((r, i) => (
                               <div key={r.id} className={i < rows.length - 1 ? "mb-3" : ""}>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-sm font-semibold truncate" style={{ maxWidth: "62%" }}>{EX[r.id] ? EX[r.id].name : r.id}</span>
+                                  <span className="text-sm font-semibold truncate" style={{ maxWidth: "62%", color: C.text }}>{EX[r.id] ? EX[r.id].name : r.id}</span>
                                   <span style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{fmtNum(r.v)} {unit}</span>
                                 </div>
                                 <div className="h-2 rounded-full overflow-hidden" style={{ background: C.card2 }}>
@@ -3091,7 +3140,7 @@ export default function BurnLabApp() {
                       })()}
 
                       <SectionLabel>PERSONAL RECORDS · e1RM</SectionLabel>
-                      <div className="rounded-2xl mb-5 overflow-hidden" style={{ background: C.card, border: "1px solid " + C.line }}>
+                      <div className="liquid-glass rounded-3xl mb-5 overflow-hidden">
                         {[...new Set(data.history.flatMap(h => h.exercises.map(e => e.id)))]
                           .map(id => ({ id, best: bestE1RM(data.history, id) }))
                           .sort((a, b) => b.best - a.best).slice(0, 6)
@@ -3099,9 +3148,9 @@ export default function BurnLabApp() {
                             <div key={p.id} className="flex items-center justify-between px-4 py-3" style={{ borderBottom: i < arr.length - 1 ? "1px solid " + C.line : "none" }}>
                               <div className="flex items-center gap-3">
                                 <Award size={15} color={i === 0 ? C.yellow : C.faint} />
-                                <span className="text-sm font-semibold">{EX[p.id] ? EX[p.id].name : p.id}</span>
+                                <span className="text-sm font-semibold" style={{ color: C.text }}>{EX[p.id] ? EX[p.id].name : p.id}</span>
                               </div>
-                              <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 20 }}>{Math.round(p.best)} <span style={{ fontSize: 12, color: C.dim, fontWeight: 600 }}>kg</span></span>
+                              <span style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 22, color: C.text }}>{Math.round(p.best)} <span style={{ fontSize: 12, color: C.dim, fontWeight: 600 }}>kg</span></span>
                             </div>
                           ))}
                       </div>
@@ -3123,13 +3172,13 @@ export default function BurnLabApp() {
                           return (
                             <div key={g.key} className="mb-4">
                               <div className="flex items-center justify-between px-1 mb-2">
-                                <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 15, letterSpacing: 0.5 }}>{g.label.toUpperCase()}</span>
-                                <span style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1 }}>{g.items.length} {g.items.length === 1 ? "SESSION" : "SESSIONS"} · {sets} SETS</span>
+                                <span style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 16, letterSpacing: 0.5, color: C.onBg }}>{g.label.toUpperCase()}</span>
+                                <span style={{ fontFamily: F.mono, fontSize: 9.5, color: C.onBgFaint, letterSpacing: 1 }}>{g.items.length} {g.items.length === 1 ? "SESSION" : "SESSIONS"} · {sets} SETS</span>
                               </div>
                               {g.items.map((h, i) => (
-                                <div key={i} className="rounded-xl px-4 py-3 mb-2 flex items-center justify-between" style={{ background: C.card, border: "1px solid " + C.line }}>
+                                <div key={i} className="liquid-glass rounded-2xl px-4 py-3 mb-2 flex items-center justify-between">
                                   <div>
-                                    <div className="font-semibold text-sm">{h.dayName}</div>
+                                    <div className="font-semibold text-sm" style={{ color: C.text }}>{h.dayName}</div>
                                     <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{dayLabel(h.date)} · {h.durationMin} min · {h.exercises.reduce((a, e) => a + e.sets.length, 0)} sets</div>
                                   </div>
                                   <span style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>{fmtNum(Math.round(h.exercises.reduce((t, e) => t + e.sets.reduce((a, s) => a + s.w * s.r, 0), 0)))} kg</span>
@@ -3153,29 +3202,26 @@ export default function BurnLabApp() {
               </button>
             )}
 
-            {/* ======= REST TIMER ======= */}
+            {/* ======= REST TIMER — obsidian LCD panel with the Doto dot-matrix countdown ======= */}
             {rest !== null && (
               <div className="fixed left-1/2 -translate-x-1/2 w-full px-5 z-20" style={{ maxWidth: 480, bottom: "calc(env(safe-area-inset-bottom) + " + (session && tab !== "train" ? 148 : 92) + "px)" }}>
-                <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: restLeft === 0 ? C.green : C.card2, border: "1px solid " + (restLeft === 0 ? C.green : C.line) }}>
-                  <div className="px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Timer size={18} color={restLeft === 0 ? "#fff" : C.yellow} />
-                      <div>
-                        <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1.5, color: restLeft === 0 ? "#ffffffcc" : C.dim }}>{restLeft === 0 ? "REST COMPLETE" : "RESTING"}</div>
-                        <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 26, lineHeight: 1, color: restLeft === 0 ? "#fff" : C.text }}>
-                          {restLeft === 0 ? "GO!" : Math.floor(restLeft / 60) + ":" + String(restLeft % 60).padStart(2, "0")}
-                        </div>
-                      </div>
+                <div className="bl-cq rounded-3xl overflow-hidden" style={{ background: "#121214", border: "1px solid " + (restLeft === 0 ? A.a : "rgba(255,255,255,0.10)"), boxShadow: restLeft === 0 ? "0 0 34px -6px " + A.a + "cc" : "0 16px 40px -14px rgba(0,0,0,0.8)" }}>
+                  <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 2, color: restLeft === 0 ? A.a : "#8A8A92" }}>{restLeft === 0 ? "REST COMPLETE" : "RESTING"}</div>
+                      {restLeft === 0
+                        ? <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 32, lineHeight: 1, letterSpacing: "0.02em", color: A.a, textShadow: "0 0 18px " + A.a + "aa" }}>GO!</div>
+                        : <DotoTimer text={Math.floor(restLeft / 60) + ":" + String(restLeft % 60).padStart(2, "0")} size={40} color={A.a} style={{ textShadow: "0 0 14px " + A.a + "88" }} />}
                     </div>
-                    <div className="flex gap-2">
-                      {restLeft > 0 && <button onClick={() => scheduleRest(rest.end + 30000, rest.total + 30)} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: C.card, border: "1px solid " + C.line, color: C.text }}>+30s</button>}
-                      <button onClick={clearRest} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: restLeft === 0 ? "#ffffff22" : C.card, border: "1px solid " + (restLeft === 0 ? "#ffffff44" : C.line), color: restLeft === 0 ? "#fff" : C.dim }}>
+                    <div className="flex gap-2 shrink-0">
+                      {restLeft > 0 && <button onClick={() => scheduleRest(rest.end + 30000, rest.total + 30)} className="px-3 py-2 rounded-full text-xs font-bold" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#FAFAFA" }}>+30s</button>}
+                      <button onClick={clearRest} className="px-3 py-2 rounded-full text-xs font-bold" style={{ background: restLeft === 0 ? A.a : "rgba(255,255,255,0.08)", border: "1px solid " + (restLeft === 0 ? A.a : "rgba(255,255,255,0.12)"), color: restLeft === 0 ? "#0D0E11" : "#FAFAFA" }}>
                         {restLeft === 0 ? "Dismiss" : "Skip"}
                       </button>
                     </div>
                   </div>
                   {restLeft > 0 && (
-                    <div className="h-1" style={{ background: C.card }}>
+                    <div className="h-1" style={{ background: "rgba(255,255,255,0.06)" }}>
                       <div className="h-full" style={{ width: (restLeft / rest.total) * 100 + "%", background: AG, transition: "width 0.25s linear" }} />
                     </div>
                   )}
@@ -3200,7 +3246,7 @@ export default function BurnLabApp() {
                     <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3">
                       {["All", ...Object.keys(MUSCLES)].map(m => (
                         <button key={m} onClick={() => setLibFilter(m)} className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
-                          style={{ background: libFilter === m ? (m === "All" ? C.text : MUSCLES[m]) : C.card, color: libFilter === m ? C.bg : C.dim, border: "1px solid " + (libFilter === m ? "transparent" : C.line) }}>
+                          style={{ background: libFilter === m ? A.a : C.card, color: libFilter === m ? "#fff" : C.dim, border: "1px solid " + (libFilter === m ? "transparent" : C.line) }}>
                           {m}
                         </button>
                       ))}
@@ -3215,12 +3261,12 @@ export default function BurnLabApp() {
                             <div className="flex items-center gap-3 min-w-0">
                               <Picto ex={e} size={44} />
                               <div className="min-w-0">
-                                <div className="font-semibold text-sm truncate">{e.name}</div>
+                                <div className="font-semibold text-sm truncate" style={{ color: C.text }}>{e.name}</div>
                                 <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{e.muscle}{e.secondary.length ? " · " + e.secondary.join(", ") : ""} · {e.equipment}</div>
                               </div>
                             </div>
                             {best > 0 && <div className="text-right shrink-0 pl-2">
-                              <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 18, lineHeight: 1 }}>{Math.round(best)}</div>
+                              <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 20, lineHeight: 1, color: C.text }}>{Math.round(best)}</div>
                               <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint }}>e1RM KG</div>
                             </div>}
                           </button>
@@ -3244,12 +3290,12 @@ export default function BurnLabApp() {
             {/* ======= EXERCISE DETAIL MODAL ======= */}
             {detail && (
               <div className="fixed inset-0 z-40 flex items-end justify-center" style={{ background: "#000000aa" }} onClick={() => setDetail(null)}>
-                <div className="w-full rounded-t-3xl p-5 bl-fade overflow-y-auto" style={{ maxWidth: 480, maxHeight: "85vh", background: C.card2, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
+                <div className="w-full rounded-t-3xl p-5 bl-fade overflow-y-auto" style={{ maxWidth: 480, maxHeight: "85vh", background: "#FFFFFF", color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex items-start gap-3">
-                      <div className="rounded-2xl p-1.5 shrink-0" style={{ background: C.card, border: "1px solid " + C.line }}><Picto ex={detail} size={72} /></div>
+                      <div className="rounded-2xl p-1.5 shrink-0" style={{ background: C.card2, border: "1px solid " + C.line }}><Picto ex={detail} size={72} /></div>
                       <div>
-                        <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, lineHeight: 1.1, textTransform: "uppercase" }}>{detail.name}</div>
+                        <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, lineHeight: 1, textTransform: "uppercase", color: C.text }}>{detail.name}</div>
                         <div className="flex gap-1.5 mt-2 flex-wrap">
                           <Chip color={MUSCLES[detail.muscle]}>{detail.muscle.toUpperCase()}</Chip>
                           {detail.secondary.map(s => <Chip key={s} color={MUSCLES[s]}>{s.toUpperCase()}</Chip>)}
@@ -3310,11 +3356,11 @@ export default function BurnLabApp() {
             {/* ======= ADD FOOD SHEET ======= */}
             {addFor !== null && (
               <div className="fixed inset-0 z-40 flex items-end justify-center" style={{ background: "#000000aa" }} onClick={closeAdd}>
-                <div className="w-full rounded-t-3xl p-5 bl-fade flex flex-col" style={{ maxWidth: 480, height: "82vh", background: C.card2, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
+                <div className="w-full rounded-t-3xl p-5 bl-fade flex flex-col" style={{ maxWidth: 480, height: "82vh", background: C.card2, color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
 
                   {addStage === "search" && (<>
                     <div className="flex items-center justify-between mb-3">
-                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 22 }}>ADD TO {(MEAL_SLOTS.find(m => m[0] === addFor) || ["", ""])[1].toUpperCase()}</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 24, textTransform: "uppercase", color: C.text }}>ADD TO {(MEAL_SLOTS.find(m => m[0] === addFor) || ["", ""])[1].toUpperCase()}</div>
                       <button onClick={closeAdd} className="p-2 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Close"><X size={15} color={C.dim} /></button>
                     </div>
                     <div className="flex gap-2 mb-3">
@@ -3456,7 +3502,7 @@ export default function BurnLabApp() {
             {/* ======= FOOD ENTRY EDIT ======= */}
             {entryEdit && (
               <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000aa" }} onClick={() => setEntryEdit(null)}>
-                <div className="w-full rounded-3xl p-5 bl-fade" style={{ maxWidth: 360, background: C.card2, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
+                <div className="w-full rounded-3xl p-5 bl-fade" style={{ maxWidth: 360, background: C.card2, color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="font-bold truncate pr-2" style={{ fontSize: 17 }}>{entryEdit.name}</div>
                     <button onClick={() => setEntryEdit(null)} className="p-2 rounded-lg shrink-0" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Close"><X size={15} color={C.dim} /></button>
@@ -3505,7 +3551,7 @@ export default function BurnLabApp() {
             {/* ======= WEIGH-IN MODAL ======= */}
             {weighOpen && (
               <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000aa" }} onClick={() => setWeighOpen(false)}>
-                <div className="w-full rounded-3xl p-5 bl-fade" style={{ maxWidth: 360, background: C.card2, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
+                <div className="w-full rounded-3xl p-5 bl-fade" style={{ maxWidth: 360, background: C.card2, color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-between mb-1">
                     <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24 }}>WEIGH-IN</div>
                     <button onClick={() => setWeighOpen(false)} className="p-2 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Close"><X size={15} color={C.dim} /></button>
@@ -3525,7 +3571,7 @@ export default function BurnLabApp() {
             {/* ======= RPE HELP MODAL ======= */}
             {rpeHelp && (
               <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000aa" }} onClick={() => setRpeHelp(false)}>
-                <div className="w-full rounded-3xl p-5 bl-fade" style={{ maxWidth: 400, background: C.card2, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
+                <div className="w-full rounded-3xl p-5 bl-fade" style={{ maxWidth: 400, background: C.card2, color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-between mb-1">
                     <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24 }}>WHAT IS RPE?</div>
                     <button onClick={() => setRpeHelp(false)} className="p-2 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Close"><X size={15} color={C.dim} /></button>
@@ -3545,7 +3591,7 @@ export default function BurnLabApp() {
             {/* ======= SWAP SHEET ======= */}
             {swapFor !== null && session && (
               <div className="fixed inset-0 z-40 flex items-end justify-center" style={{ background: "#000000aa" }} onClick={() => setSwapFor(null)}>
-                <div className="w-full rounded-t-3xl p-5 bl-fade overflow-y-auto" style={{ maxWidth: 480, maxHeight: "80vh", background: C.card2, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
+                <div className="w-full rounded-t-3xl p-5 bl-fade overflow-y-auto" style={{ maxWidth: 480, maxHeight: "80vh", background: C.card2, color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
                   {(() => {
                     const cur = EX[session.items[swapFor].ex];
                     const cands = EXERCISES.filter(e => e.muscle === cur.muscle && e.id !== cur.id && eqAllowed(e.id, gym))
@@ -3583,9 +3629,9 @@ export default function BurnLabApp() {
             {/* ======= WORKOUT SUMMARY ======= */}
             {summary && (
               <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000cc" }}>
-                <div className="w-full rounded-3xl p-6 text-center bl-fade overflow-y-auto" style={{ maxWidth: 400, maxHeight: "88vh", background: C.card2, border: "1px solid " + C.line }}>
+                <div className="w-full rounded-3xl p-6 text-center bl-fade overflow-y-auto" style={{ maxWidth: 400, maxHeight: "88vh", background: C.card2, color: C.text, border: "1px solid " + C.line }}>
                   <div style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: 3 }}>WORKOUT SAVED</div>
-                  <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 36, textTransform: "uppercase", lineHeight: 1.1 }}>{summary.entry.dayName} DONE</div>
+                  <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 38, textTransform: "uppercase", lineHeight: 0.95, color: C.text }}>{summary.entry.dayName} DONE</div>
                   <div className="grid grid-cols-3 gap-3 mt-5">
                     {[["DURATION", summary.entry.durationMin, "min"], ["SETS", summary.setCount, "logged"], ["TONNAGE", fmtNum(Math.round(summary.tonnage)), "kg"]].map((s, i) => (
                       <div key={i} className="rounded-xl py-3" style={{ background: C.card, border: "1px solid " + C.line }}>
@@ -3655,7 +3701,7 @@ export default function BurnLabApp() {
                   <div className="w-full bl-fade" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, background: C.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, border: "1px solid " + C.line, boxShadow: SHADOW.hero, padding: SPACE[5], paddingBottom: "calc(env(safe-area-inset-bottom) + " + SPACE[5] + "px)" }}>
                     <div className="mx-auto mb-4 rounded-full" style={{ width: 40, height: 4, background: C.line }} />
                     <div className="flex items-center justify-between mb-4">
-                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, letterSpacing: 0.5, textTransform: "uppercase" }}>Quick Actions</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, letterSpacing: 0.5, textTransform: "uppercase", color: C.text }}>Quick Actions</div>
                       <button onClick={() => setFabOpen(false)} aria-label="Close" className="p-2 rounded-full" style={{ background: C.card2, border: "1px solid " + C.line }}><X size={16} color={C.dim} /></button>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -3667,7 +3713,7 @@ export default function BurnLabApp() {
                             style={{ "--i": i, background: C.card2, border: "1px solid " + C.line, borderRadius: RADIUS.md, padding: SPACE[3] }}>
                             <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 42, height: 42, background: A.a + "1F", border: "1px solid " + A.a + "3A" }}><Icon size={19} color={A.a} /></span>
                             <div className="flex-1 min-w-0">
-                              <div className="font-bold text-[15px]">{a.label}</div>
+                              <div className="font-bold text-[15px]" style={{ color: C.text }}>{a.label}</div>
                               <div className="text-xs truncate" style={{ color: C.dim }}>{a.sub}</div>
                             </div>
                             <ArrowUpRight size={16} color={C.faint} className="shrink-0" />
@@ -3748,7 +3794,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
     setSaved(false);
     return { ...f, focusMuscles };
   });
-  const inputStyle = { background: C.card, border: "1px solid " + C.line, color: C.text, fontSize: 16, fontFamily: F.body };
+  const inputStyle = { background: C.card2, border: "1px solid " + C.line, color: C.text, fontSize: 16, fontFamily: F.body };
   const selStyle = { ...inputStyle, width: "100%", borderRadius: 12, padding: "10px 12px" };
 
   const applyProfile = () => {
@@ -3761,7 +3807,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
 
   const Row = ({ label, children }) => (
     <div className="flex items-center justify-between py-3" style={{ borderBottom: "1px solid " + C.line }}>
-      <span className="text-sm font-semibold">{label}</span>{children}
+      <span className="text-sm font-semibold" style={{ color: C.text }}>{label}</span>{children}
     </div>
   );
 
@@ -3775,7 +3821,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
         <div className="flex-1 px-5 overflow-y-auto" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 30px)" }}>
 
           <SectionLabel>ATHLETE PROFILE</SectionLabel>
-          <div className="rounded-2xl p-4 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
+          <div className="liquid-glass rounded-3xl p-4 mb-5">
             <label className="block mb-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>NAME</label>
             <input value={form.name} onChange={e => set("name", e.target.value)} placeholder="Your name" className="w-full rounded-xl px-4 py-3 mb-3" style={inputStyle} />
             <div className="grid grid-cols-3 gap-2 mb-3">
@@ -3840,7 +3886,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
                 const on = data.settings.accent === k;
                 return (
                   <button key={k} onClick={() => setSetting("accent", k)} aria-label={ac.name} aria-pressed={on} className="bl-spring flex flex-col items-center gap-1.5 active:scale-90">
-                    <span className="rounded-full" style={{ width: 42, height: 42, background: "linear-gradient(135deg," + ac.b + "," + ac.a + ")", border: on ? "2.5px solid #FAFAFA" : "2.5px solid transparent", boxShadow: on ? "0 0 16px " + ac.a + "88" : "none" }} />
+                    <span className="rounded-full" style={{ width: 42, height: 42, background: "linear-gradient(135deg," + ac.b + "," + ac.a + ")", border: on ? "2.5px solid " + C.text : "2.5px solid " + C.line, boxShadow: on ? "0 0 0 2px #fff, 0 0 14px " + ac.a + "88" : "none" }} />
                     <span style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, color: on ? C.text : C.faint }}>{ac.name.toUpperCase()}</span>
                   </button>
                 );
@@ -3849,7 +3895,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <SectionLabel>REST TIMER</SectionLabel>
-          <div className="rounded-2xl px-4 py-1 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
+          <div className="liquid-glass rounded-3xl px-4 py-1 mb-5">
             <Row label="Start automatically after a set"><Toggle on={data.settings.autoRest} onChange={v => setSetting("autoRest", v)} label="Auto rest timer" /></Row>
             <Row label="Finish sound"><Toggle on={data.settings.sound} onChange={v => { unlockAudio(); setSetting("sound", v); if (v) playDing(); }} label="Timer finish sound" /></Row>
             <Row label="Vibration (Android)"><Toggle on={data.settings.vibrate} onChange={v => { setSetting("vibrate", v); if (v) haptic("timerDone"); }} label="Timer vibration" /></Row>
@@ -3867,7 +3913,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <SectionLabel>PROGRESS PHOTOS</SectionLabel>
-          <div className="rounded-2xl px-4 py-1 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
+          <div className="liquid-glass rounded-3xl px-4 py-1 mb-5">
             <div className="flex items-center justify-between py-3" style={{ borderBottom: "1px solid " + C.line }}>
               <span className="text-sm font-semibold">Reminder cadence</span>
               <select value={data.settings.photoCadence} onChange={e => setSetting("photoCadence", e.target.value)} style={{ ...selStyle, width: 110 }} aria-label="Photo reminder cadence">
@@ -3884,7 +3930,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <SectionLabel>TRAINING</SectionLabel>
-          <div className="rounded-2xl px-4 py-1 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
+          <div className="liquid-glass rounded-3xl px-4 py-1 mb-5">
             <Row label="Plate-loading graphics"><Toggle on={data.settings.plates} onChange={v => setSetting("plates", v)} label="Plate graphics" /></Row>
             <div className="flex items-center justify-between py-3">
               <span className="text-sm font-semibold">Weekly sets target / muscle</span>
@@ -3897,7 +3943,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           {pf.targets && (
             <>
               <SectionLabel>YOUR NUMBERS</SectionLabel>
-              <div className="rounded-2xl px-4 py-1 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
+              <div className="liquid-glass rounded-3xl px-4 py-1 mb-5">
                 <Row label="Maintenance"><span style={{ fontFamily: F.mono, fontSize: 13 }}>{fmtNum(pf.targets.maintain)} kcal</span></Row>
                 <Row label={"Target (" + (GOAL_LABEL[pf.goal] || "") + ")"}><span style={{ fontFamily: F.mono, fontSize: 13, color: A.a }}>{fmtNum(pf.targets.goal)} kcal</span></Row>
                 <Row label="Macros"><span style={{ fontFamily: F.mono, fontSize: 12, color: C.dim }}>{pf.targets.proteinG}P · {pf.targets.fatG}F · {pf.targets.carbG}C</span></Row>
@@ -3912,7 +3958,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           )}
 
           <SectionLabel>DATA</SectionLabel>
-          <div className="rounded-2xl px-4 py-1 mb-5" style={{ background: C.card2, border: "1px solid " + C.line }}>
+          <div className="liquid-glass rounded-3xl px-4 py-1 mb-5">
             <div className="py-3" style={{ borderBottom: "1px solid " + C.line }}>
               <div className="flex items-center justify-between">
                 <div>
@@ -3941,7 +3987,7 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
           </div>
 
           <div className="text-center mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>
-            BURNLAB v6.2 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
+            BURNLAB v7.0 · {troph.filter(t => t.done).length}/{troph.length} trophies · data lives on this device only
           </div>
         </div>
       </div>

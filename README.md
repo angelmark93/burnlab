@@ -2,6 +2,16 @@
 
 Science-based workout tracker built with Vite + React + Tailwind. Installable PWA with offline support. All data (profile, workouts, trophies) lives in the browser's localStorage on your device — no backend.
 
+## What's new in v7.0 — "Editorial Inversion"
+
+A ground-up visual rebrand: stark **white cards on a near-black canvas**, near-black ink type, one scarce orange accent (glows, the timer, arrows — nothing else).
+
+- **Type system** — self-hosted **Anton** (ultra-heavy condensed, upright) carries every display title and hero number; **Archivo** grotesque for body; and a self-hosted **Doto** dot-matrix LCD face powers the rest-timer countdown. The old italic display face is retired.
+- **Clip-proof numbers (hard requirement)** — every headline figure is tabular, upright (no italic overhang), and sized with container-query units (`cqi`) so it auto-shrinks to its card instead of ever truncating. Verified against a rendered test matrix (9 → 199,999, `0:07`, `20:30`) at 320 / 375 / 430 px. Fonts self-hosted so the look survives fully offline.
+- **Bento dashboard** — Home is a grid of white cards, each with a tiny title, micro progress bar, one huge number and an "OF X" label, tapping through to detail.
+- **Editorial white-card treatment** across Train, the one-exercise workout runner, Fuel, Progress, Trophies, Settings, onboarding and every modal — heavy uppercase titles, obsidian input wells, and the signature **dot-matrix rest timer** on a dark LCD panel.
+- Accent themes (Orange default, Blue / Green / Yellow) are preserved and still recolor the app live.
+
 ## What's new in v6.2 — Progress analytics
 
 - **Weight trend + insights** (MacroFactor-style) — an EMA-smoothed **trend line** drawn over the raw scale points so day-to-day noise stops lying to you, with an Insights panel: current trend weight, **weekly rate**, an estimated **energy balance** (kcal/day, ~7,700 kcal/kg), a 30-day projection, and trend change over the last 3/7/14/30/90 days. Rate/change colours are goal-aware (green when moving toward a cut/bulk goal, red when against it).
@@ -94,7 +104,7 @@ Local dev: `npm install`, then `npm run dev`.
 
 ## Updating after changes
 
-Bump `CACHE` in `public/sw.js` (currently `burnlab-v14`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
+Bump `CACHE` in `public/sw.js` (currently `burnlab-v15`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
 
 ## Notes
 

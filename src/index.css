@@ -1,14 +1,22 @@
 @import "tailwindcss";
 
-/* Custom brand display face */
+/* Display face — Anton (ultra-heavy condensed, upright). Self-hosted for offline. */
 @font-face {
-  font-family: 'NIKE';
-  src: url('/fonts/NIKE.ttf') format('truetype');
+  font-family: 'Anton';
+  src: url('/fonts/Anton-Regular.woff2') format('woff2');
+  font-weight: 400 900; font-style: normal; font-display: swap;
+}
+/* Rest-timer face — Doto (dot-matrix LCD). Self-hosted for offline. */
+@font-face {
+  font-family: 'Doto';
+  src: url('/fonts/Doto.woff2') format('woff2');
   font-weight: 400 900; font-style: normal; font-display: swap;
 }
 
 html, body, #root { min-height: 100%; }
-body { margin: 0; background: #000000; }
+body { margin: 0; background: #0A0A0C; }
+/* Tabular figures app-wide by default so numeric columns never jitter or clip on glyph-width. */
+* { font-variant-numeric: tabular-nums; }
 
 /* Prevent iOS zoom-on-focus: keep all form controls at 16px+ */
 input, select, textarea { font-size: 16px; }
@@ -19,18 +27,22 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 *:focus-visible { outline: 2px solid #FF5722; outline-offset: 1px; border-radius: 4px; }
 ::-webkit-scrollbar { width: 0; height: 0; }
 
-/* ============ LIQUID GLASS SYSTEM ============ */
+/* ============ EDITORIAL WHITE-CARD SYSTEM ============ */
+/* Repurposed from the old liquid-glass class so every existing card flips to a solid white
+   surface at once: white fill, hairline edge, soft neutral drop shadow on the near-black canvas. */
 .liquid-glass {
-  background: rgba(24, 24, 27, 0.30);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12), 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+  background: #FFFFFF;
+  color: #0A0A0B; /* establish dark ink as inherited color inside white cards */
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.35), 0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  container-type: inline-size; /* so HeroNumber cqi sizing fits the card width — clip-proof */
 }
+/* Slap on any non-.liquid-glass wrapper that holds a HeroNumber so its cqi sizing resolves. */
+.bl-cq { container-type: inline-size; }
 .liquid-glass-active {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.22), 0 12px 40px -8px rgba(255, 87, 34, 0.12);
+  background: #FFFFFF;
+  border: 1px solid rgba(255, 87, 34, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 87, 34, 0.25), 0 8px 26px -8px rgba(255, 87, 34, 0.35);
 }
 /* Athletic spring — responsive, slightly overshooting */
 .bl-spring { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease; }
