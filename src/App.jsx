@@ -17,64 +17,64 @@ const store = {
   async delete(key) { localStorage.removeItem(key); return { key, deleted: true }; },
 };
 
-/* ================= DESIGN TOKENS ================= */
-/* Editorial Inversion palette — stark white cards on a near-black canvas, near-black ink on the
-   cards, one scarce orange accent (glows / timer / arrows only). The primary text scale (text/dim/
-   faint) is INK, tuned for white surfaces; a parallel onBg scale carries the few chrome elements
-   that sit directly on the black canvas (screen headers, section labels, nav, header row). */
+/* ================= DESIGN TOKENS — "NOIR" ================= */
+/* Dark, friendly-premium. Flat black canvas; depth comes from card TONE, not borders or glows.
+   Surfaces separate by tone only (no visible borders). One family, sentence case, one electric
+   accent. The onBg* scale is collapsed onto the text scale — everything is light-on-dark now,
+   so canvas chrome and card content share the same text tokens. Accent = black text/icons. */
 const C = {
-  bg: "#0A0A0C", card: "#FFFFFF", card2: "#F1F1F3", line: "rgba(0,0,0,0.10)",
-  text: "#0A0A0B", dim: "#6B6B73", faint: "#9A9AA2",           // ink — for white cards
-  onBg: "#FAFAFA", onBgDim: "#A1A1AA", onBgFaint: "#6A6A72",   // light — for the black canvas
-  onLine: "rgba(255,255,255,0.10)",
-  red: "#DC4A2B", blue: "#6B6B73", yellow: "#FF5722", green: "#16A34A",
-  plate5: "#52525B", plate25: "#A1A1AA",
+  bg: "#0A0A0B", card: "#17181B", card2: "#1F2024", line: "rgba(255,255,255,0.04)",
+  text: "#F4F4F2", dim: "#9BA0A6", faint: "#6A6F76",
+  onBg: "#F4F4F2", onBgDim: "#9BA0A6", onBgFaint: "#6A6F76",   // collapsed — same light scale
+  onLine: "rgba(255,255,255,0.04)",
+  red: "#F2665A", blue: "#9BA0A6", yellow: "#F2C41A", green: "#7BE0C3",
+  vizCal: "#F28C33", vizMint: "#7BE0C3",   // data-viz only (calorie ring / water+weight sparklines)
+  track: "#26272B",                         // ring + progress track tone
+  plate5: "#3A3B40", plate25: "#6A6F76",
 };
-/* Editorial Inversion type system: Anton (ultra-heavy condensed, upright) carries every display
-   title + hero number — upright kills the italic overhang that clipped the old NIKE face; Archivo
-   (grotesk) for body/UI; Doto (dot-matrix LCD) for the rest timer; IBM Plex Mono for data/metadata. */
+/* Noir type: one friendly geometric grotesque everywhere — Plus Jakarta Sans (warm at semibold,
+   legible numerals at 40px+, tight wordmark at 800). Doto (dot-matrix) is the single borrowed
+   brutalist signature, used ONLY for the rest-timer countdown. IBM Plex Mono for tiny data labels. */
 const F = {
-  brand: "'Anton', 'Archivo', sans-serif",
-  disp: "'Anton', 'Archivo Black', sans-serif",
-  body: "'Archivo', sans-serif",
+  brand: "'Plus Jakarta Sans', sans-serif",
+  disp: "'Plus Jakarta Sans', sans-serif",
+  body: "'Plus Jakarta Sans', sans-serif",
   timer: "'Doto', 'IBM Plex Mono', monospace",
   mono: "'IBM Plex Mono', monospace",
 };
-/* Accent themes — orange is the default brand, with blue / green / yellow reinstated as options.
-   Legacy saved keys (ember/ice/volt/violet) map onto the current set so old profiles still resolve. */
-const ORANGE = { name: "Orange", a: "#FF5722", b: "#FF7A45" };
+/* Accent themes — "Volt" electric lime is the new default headliner, "Amber" the second.
+   Legacy saved key `ember` now resolves to Volt so existing profiles adopt the new default;
+   the old blue/green/yellow remain as extras. Accent fills always take BLACK text/icons. */
 const ACCENTS = {
-  ember:  ORANGE,
-  ice:    { name: "Blue",   a: "#2E8BFF", b: "#5CC8FF" },
-  volt:   { name: "Green",  a: "#22C55E", b: "#7CE88F" },
-  violet: { name: "Yellow", a: "#F2B01E", b: "#FFD34D" },
+  ember:  { name: "Volt",  a: "#D6F25F", b: "#E4F98A" },
+  amber:  { name: "Amber", a: "#F2C41A", b: "#FFD84D" },
+  ice:    { name: "Blue",  a: "#5AA9FF", b: "#8FCBFF" },
+  volt:   { name: "Green", a: "#7BE0C3", b: "#A6EDD9" },
+  violet: { name: "Coral", a: "#FF8A6B", b: "#FFB59B" },
 };
-/* Elevation for white cards on the near-black canvas — soft neutral drop shadows (no inset white
-   highlight, which only reads on dark surfaces). Accent glow stays for the scarce orange moments. */
+const ORANGE = ACCENTS.ember; // legacy alias used by shared components (Toggle/PlateBar)
+/* Depth by tone, not shadow — shadows kept minimal (Noir has no hard elevation). */
 const SHADOW = {
-  card: "0 2px 8px -2px rgba(0,0,0,0.35), 0 8px 24px -12px rgba(0,0,0,0.45)",
-  hero: "0 4px 14px -4px rgba(0,0,0,0.4), 0 18px 44px -18px rgba(0,0,0,0.55)",
-  glow: hex => "0 8px 22px -6px " + hex + "59",
-  nav: "0 -6px 24px -12px rgba(0,0,0,0.5)",
-  subtle: "0 1px 3px rgba(0,0,0,0.18)",
-  lifted: "0 10px 24px -8px rgba(0,0,0,0.45)",
+  card: "0 1px 2px rgba(0,0,0,0.3)",
+  hero: "0 10px 34px -14px rgba(0,0,0,0.7)",
+  glow: hex => "0 6px 20px -6px " + hex + "44",
+  nav: "0 10px 34px -10px rgba(0,0,0,0.7)",
+  subtle: "0 1px 2px rgba(0,0,0,0.3)",
+  lifted: "0 12px 28px -10px rgba(0,0,0,0.6)",
 };
-/* motion + layout scales — the ad hoc paddings/radii/timings get consolidated onto these
-   as each screen is touched (v4.0). Not a big-bang refactor; a shared vocabulary to reach for. */
 const EASE = "cubic-bezier(0.22,0.9,0.3,1)";
 const DUR = { micro: 150, standard: 350, hero: 700 };
-const RADIUS = { sm: 10, md: 16, lg: 22, xl: 28, pill: 9999 };
+const RADIUS = { sm: 12, md: 20, lg: 24, xl: 28, pill: 9999 };
 const SPACE = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 };
-/* Monochrome muscle identity — every muscle renders in the accent orange; the heat map now reads
-   as intensity only (dormant zinc -> hot orange) rather than per-muscle hue. */
+/* Muscle identity — a single warm data-viz hue on dark (the heat map scales intensity from it);
+   selected-muscle states elsewhere use the live accent, passed in explicitly. */
 const MUSCLES = {
-  Chest: "#FF5722", Back: "#FF5722", Shoulders: "#FF5722", Biceps: "#FF5722",
-  Triceps: "#FF5722", Quads: "#FF5722", Hamstrings: "#FF5722", Glutes: "#FF5722",
-  Calves: "#FF5722", Abs: "#FF5722",
+  Chest: "#F28C33", Back: "#F28C33", Shoulders: "#F28C33", Biceps: "#F28C33",
+  Triceps: "#F28C33", Quads: "#F28C33", Hamstrings: "#F28C33", Glutes: "#F28C33",
+  Calves: "#F28C33", Abs: "#F28C33",
 };
-/* Single-accent discipline — unlocked trophies all render in the accent orange (tier still labels
-   difficulty in copy, but no competing metallic hues). */
-const TIER = { bronze: "#FF5722", silver: "#FF5722", gold: "#FF5722", platinum: "#FF5722" };
+/* Tier-tinted trophy chips — quiet metallic hues that sit calmly on the dark surfaces. */
+const TIER = { bronze: "#C08457", silver: "#A8AEB5", gold: "#F2C41A", platinum: "#7BE0C3" };
 const MUSCLE_GROUPS = {
   "Upper Body": ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Abs"],
   "Lower Body": ["Quads", "Hamstrings", "Glutes", "Calves"],
@@ -306,7 +306,7 @@ function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size
       <div className="flex gap-1 mb-3 rounded-full p-1" style={{ background: C.card2, border: "1px solid " + C.line }}>
         {["front", "back"].map(v => (
           <button key={v} type="button" onClick={() => { setView(v); setTap(null); }} className="px-4 py-1.5 rounded-full text-xs font-bold transition-colors"
-            style={{ background: view === v ? C.text : "transparent", color: view === v ? "#fff" : C.dim }}>
+            style={{ background: view === v ? C.text : "transparent", color: view === v ? "#0A0A0B" : C.dim }}>
             {v === "front" ? "Front" : "Back"}
           </button>
         ))}
@@ -2862,7 +2862,7 @@ export default function BurnLabApp() {
                           <div className="flex gap-1 mt-1 mb-3">
                             {Object.keys(W_RANGES).map(r => (
                               <button key={r} onClick={() => setWeightRange(r)} className="flex-1 py-1.5 rounded-full text-xs font-bold transition-colors"
-                                style={{ background: weightRange === r ? C.text : C.card2, color: weightRange === r ? "#fff" : C.dim, border: "1px solid " + (weightRange === r ? C.text : C.line) }}>{r}</button>
+                                style={{ background: weightRange === r ? C.text : C.card2, color: weightRange === r ? "#0A0A0B" : C.dim, border: "1px solid " + (weightRange === r ? C.text : C.line) }}>{r}</button>
                             ))}
                           </div>
                           <div className="flex items-center justify-between">
@@ -3069,7 +3069,7 @@ export default function BurnLabApp() {
                             <div className="flex items-center gap-2 mb-3">
                               {["sets", "volume"].map(m => (
                                 <button key={m} onClick={() => setProgMetric(m)} className="px-3 py-1.5 rounded-full text-xs font-bold bl-spring"
-                                  style={{ background: progMetric === m ? A.a : C.card2, color: progMetric === m ? "#fff" : C.dim, border: "1px solid " + (progMetric === m ? A.a : C.line) }}>{m === "sets" ? "SETS" : "TONNAGE"}</button>
+                                  style={{ background: progMetric === m ? A.a : C.card2, color: progMetric === m ? "#0A0A0B" : C.dim, border: "1px solid " + (progMetric === m ? A.a : C.line) }}>{m === "sets" ? "SETS" : "TONNAGE"}</button>
                               ))}
                             </div>
                             <div className="flex items-start justify-between mb-1">
@@ -3100,7 +3100,7 @@ export default function BurnLabApp() {
                             <div className="flex gap-1 mt-2">
                               {Object.keys(W_RANGES).map(r => (
                                 <button key={r} onClick={() => setProgRange(r)} className="flex-1 py-1.5 rounded-full text-xs font-bold transition-colors"
-                                  style={{ background: progRange === r ? C.text : C.card2, color: progRange === r ? "#fff" : C.dim, border: "1px solid " + (progRange === r ? C.text : C.line) }}>{r}</button>
+                                  style={{ background: progRange === r ? C.text : C.card2, color: progRange === r ? "#0A0A0B" : C.dim, border: "1px solid " + (progRange === r ? C.text : C.line) }}>{r}</button>
                               ))}
                             </div>
                           </div>
@@ -3246,7 +3246,7 @@ export default function BurnLabApp() {
                     <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3">
                       {["All", ...Object.keys(MUSCLES)].map(m => (
                         <button key={m} onClick={() => setLibFilter(m)} className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
-                          style={{ background: libFilter === m ? A.a : C.card, color: libFilter === m ? "#fff" : C.dim, border: "1px solid " + (libFilter === m ? "transparent" : C.line) }}>
+                          style={{ background: libFilter === m ? A.a : C.card, color: libFilter === m ? "#0A0A0B" : C.dim, border: "1px solid " + (libFilter === m ? "transparent" : C.line) }}>
                           {m}
                         </button>
                       ))}

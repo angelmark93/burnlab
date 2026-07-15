@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
-/* Display face — Anton (ultra-heavy condensed, upright). Self-hosted for offline. */
+/* Noir type — Plus Jakarta Sans (variable, one family everywhere). Self-hosted for offline. */
 @font-face {
-  font-family: 'Anton';
-  src: url('/fonts/Anton-Regular.woff2') format('woff2');
-  font-weight: 400 900; font-style: normal; font-display: swap;
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans.woff2') format('woff2');
+  font-weight: 200 800; font-style: normal; font-display: swap;
 }
-/* Rest-timer face — Doto (dot-matrix LCD). Self-hosted for offline. */
+/* Rest-timer face — Doto (dot-matrix LCD). Self-hosted for offline. The one borrowed signature. */
 @font-face {
   font-family: 'Doto';
   src: url('/fonts/Doto.woff2') format('woff2');
@@ -14,7 +14,7 @@
 }
 
 html, body, #root { min-height: 100%; }
-body { margin: 0; background: #0A0A0C; }
+body { margin: 0; background: #0A0A0B; }
 /* Tabular figures app-wide by default so numeric columns never jitter or clip on glyph-width. */
 * { font-variant-numeric: tabular-nums; }
 
@@ -24,25 +24,22 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 
-*:focus-visible { outline: 2px solid #FF5722; outline-offset: 1px; border-radius: 4px; }
+*:focus-visible { outline: 2px solid #D6F25F; outline-offset: 1px; border-radius: 4px; }
 ::-webkit-scrollbar { width: 0; height: 0; }
 
-/* ============ EDITORIAL WHITE-CARD SYSTEM ============ */
-/* Repurposed from the old liquid-glass class so every existing card flips to a solid white
-   surface at once: white fill, hairline edge, soft neutral drop shadow on the near-black canvas. */
+/* ============ NOIR CARD SYSTEM ============ */
+/* Solid surface-1 card, separated by tone (no border). Depth from tone, not shadow. */
 .liquid-glass {
-  background: #FFFFFF;
-  color: #0A0A0B; /* establish dark ink as inherited color inside white cards */
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.35), 0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  background: #17181B;
+  color: #F4F4F2;
   container-type: inline-size; /* so HeroNumber cqi sizing fits the card width — clip-proof */
 }
 /* Slap on any non-.liquid-glass wrapper that holds a HeroNumber so its cqi sizing resolves. */
 .bl-cq { container-type: inline-size; }
+/* Selected / active card — a quiet accent ring (lime), no glow spill. */
 .liquid-glass-active {
-  background: #FFFFFF;
-  border: 1px solid rgba(255, 87, 34, 0.55);
-  box-shadow: 0 0 0 1px rgba(255, 87, 34, 0.25), 0 8px 26px -8px rgba(255, 87, 34, 0.35);
+  background: #1F2024;
+  box-shadow: inset 0 0 0 1.5px rgba(214, 242, 95, 0.7);
 }
 /* Athletic spring — responsive, slightly overshooting */
 .bl-spring { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease; }
