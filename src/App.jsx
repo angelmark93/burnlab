@@ -1609,7 +1609,8 @@ export default function BurnLabApp() {
   const [fabOpen, setFabOpen] = useState(false);      // central-FAB shortcuts sheet
   const [openIdx, setOpenIdx] = useState(null);
   const [detail, setDetail] = useState(null);
-  const [rest, setRest] = useState(null);          // { end: ms timestamp, total: seconds } | null
+  const [rest, setRest] = useState(null);          // { end: ms timestamp, total: seconds, pausedLeft?: seconds } | null
+  const [restBig, setRestBig] = useState(true);    // full-screen takeover vs minimised pill
   const [now, setNow] = useState(Date.now());
   const restFired = useRef(false);
   const [photos, setPhotos] = useState([]);
@@ -1939,7 +1940,8 @@ export default function BurnLabApp() {
      Remaining time is always derived from Date.now() vs the stored end timestamp;
      when the tab is throttled/suspended, the visibilitychange re-sync snaps it
      straight to the correct value the moment the screen unlocks. */
-  const restLeft = rest ? Math.max(0, Math.ceil((rest.end - now) / 1000)) : null;
+  const restPaused = rest ? rest.pausedLeft != null : false;
+  const restLeft = rest ? (restPaused ? rest.pausedLeft : Math.max(0, Math.ceil((rest.end - now) / 1000))) : null;
   useEffect(() => {
     if (rest === null) return;
     tick.current = setInterval(() => setNow(Date.now()), 250);
@@ -2046,8 +2048,11 @@ export default function BurnLabApp() {
 
   /* ---------- rest-timer / service-worker handoff ---------- */
   const postToSW = (msg) => { try { navigator.serviceWorker && navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage(msg); } catch (e) {} };
-  const scheduleRest = (end, total) => { setRest({ end, total }); postToSW({ type: "rest-schedule", end, total }); };
+  const scheduleRest = (end, total) => { setRest({ end, total }); setRestBig(true); postToSW({ type: "rest-schedule", end, total }); };
   const clearRest = () => { setRest(null); postToSW({ type: "rest-cancel" }); };
+  const pauseRest = () => { if (!rest || rest.pausedLeft != null) return; const left = Math.max(0, Math.ceil((rest.end - Date.now()) / 1000)); setRest({ ...rest, pausedLeft: left }); postToSW({ type: "rest-cancel" }); if (data.settings.vibrate) haptic("tap"); };
+  const resumeRest = () => { if (!rest || rest.pausedLeft == null) return; const end = Date.now() + rest.pausedLeft * 1000; setRest({ end, total: rest.total }); postToSW({ type: "rest-schedule", end, total: rest.total }); if (data.settings.vibrate) haptic("tap"); };
+  const addRest = (secs) => { if (!rest) return; if (rest.pausedLeft != null) { setRest({ ...rest, pausedLeft: rest.pausedLeft + secs, total: rest.total + secs }); } else { scheduleRest(rest.end + secs * 1000, rest.total + secs); } if (data.settings.vibrate) haptic("tap"); };
 
   const toggleDone = (idx, i, restSec) => {
     const st = session.entries[idx][i];
@@ -2396,7 +2401,7 @@ export default function BurnLabApp() {
                         <button key={k} onClick={() => { if (data.settings.vibrate) haptic("tap"); save({ ...data, program: k }); }}
                           className={"bl-spring rounded-2xl px-2 py-4 text-center active:scale-[0.97] " + (on ? "liquid-glass-active" : "liquid-glass")}
                           style={on ? { transform: "scale(1.03)" } : {}}>
-                          <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 18, lineHeight: 1, textTransform: "uppercase", color: on ? C.text : C.dim }}>{pr.name.toUpperCase()}</div>
+                          <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 16, lineHeight: 1.05, letterSpacing: "-0.01em", color: on ? C.text : C.dim }}>{pr.name}</div>
                           <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, marginTop: 5, color: on ? A.a : C.faint }}>{pr.freq}</div>
                         </button>
                       );
@@ -2411,7 +2416,7 @@ export default function BurnLabApp() {
                           <div className="flex items-center justify-between px-4 pt-3.5">
                             <div>
                               <div className="flex items-center gap-2">
-                                <span style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, textTransform: "uppercase", color: C.text }}>{day.name}</span>
+                                <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>{day.name}</span>
                                 {di === nextDayIdx && <Chip color={A.a}>UP NEXT</Chip>}
                               </div>
                               <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{day.items.length} exercises · {day.items.reduce((a, i) => {
@@ -2463,7 +2468,7 @@ export default function BurnLabApp() {
                         <div className="flex items-center justify-between">
                           <div>
                             <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>● LIVE SESSION</div>
-                            <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 30, textTransform: "uppercase", lineHeight: 1.1 }}>{session.dayName}</div>
+                            <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", lineHeight: 1.1, color: C.text }}>{session.dayName}</div>
                           </div>
                           {discardArm ? (
                             <div className="flex items-center gap-2">
@@ -2523,7 +2528,7 @@ export default function BurnLabApp() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>EXERCISE {cur + 1} / {session.items.length}{it.focus ? " · 🎯 FOCUS" : ""}</div>
-                                <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 30, lineHeight: 0.98, textTransform: "uppercase", color: C.text }}>{ex.name}</div>
+                                <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 26, lineHeight: 1.02, letterSpacing: "-0.02em", color: C.text }}>{ex.name}</div>
                                 <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim, marginTop: 2 }}>{it.sets} × {it.lo}-{it.hi} @ RPE {it.rpe} · rest {Math.round(it.rest / 60)}m</div>
                               </div>
                               <Picto ex={ex} size={52} />
@@ -2598,24 +2603,22 @@ export default function BurnLabApp() {
                             className="liquid-glass bl-spring flex items-center justify-center py-3.5 rounded-2xl active:scale-95"
                             style={{ width: 54, color: C.text, opacity: cur === 0 ? 0.35 : 1 }}><ChevronLeft size={18} color={C.text} /></button>
                           {cur < session.items.length - 1 ? (
-                            <button onClick={goNext} className="bl-spring relative overflow-hidden flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl active:scale-[0.98]"
-                              style={{ background: AGV, boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
-                              <span className="absolute left-4 right-4 top-0 pointer-events-none" style={{ height: 1.5, background: "rgba(255,255,255,0.55)", borderRadius: 2 }} aria-hidden="true" />
-                              <span style={{ fontFamily: F.disp, fontSize: 19, letterSpacing: -0.3, color: "#000" }}>NEXT EXERCISE</span>
-                              <ChevronLeft size={18} color="#000" strokeWidth={2.6} style={{ transform: "rotate(180deg)" }} />
+                            <button onClick={goNext} className="bl-spring flex-1 flex items-center justify-center gap-2 rounded-2xl active:scale-[0.98]"
+                              style={{ height: 56, background: A.a }}>
+                              <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em", color: "#0A0A0B" }}>Next exercise</span>
+                              <ChevronLeft size={18} color="#0A0A0B" strokeWidth={2.6} style={{ transform: "rotate(180deg)" }} />
                             </button>
                           ) : (
-                            <button onClick={finishSession} className="bl-spring relative overflow-hidden flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl active:scale-[0.98]"
-                              style={{ background: AGV, boxShadow: "0 10px 30px -8px " + A.a + "aa" }}>
-                              <span className="absolute left-4 right-4 top-0 pointer-events-none" style={{ height: 1.5, background: "rgba(255,255,255,0.55)", borderRadius: 2 }} aria-hidden="true" />
-                              <span style={{ fontFamily: F.disp, fontSize: 19, letterSpacing: -0.3, color: "#000" }}>FINISH WORKOUT</span>
+                            <button onClick={finishSession} className="bl-spring flex-1 flex items-center justify-center gap-2 rounded-2xl active:scale-[0.98]"
+                              style={{ height: 56, background: A.a }}>
+                              <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em", color: "#0A0A0B" }}>Finish workout</span>
                             </button>
                           )}
                         </div>
                         {cur < session.items.length - 1 && (
-                          <button onClick={finishSession} className="w-full text-center py-4 uppercase transition-colors"
-                            style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, letterSpacing: 3, color: C.faint }}>
-                            Finish workout
+                          <button onClick={finishSession} className="w-full text-center py-4 transition-colors"
+                            style={{ fontFamily: F.body, fontSize: 14, fontWeight: 600, color: C.faint }}>
+                            Finish workout early
                           </button>
                         )}
                       </>
@@ -3238,27 +3241,82 @@ export default function BurnLabApp() {
               </button>
             )}
 
-            {/* ======= REST TIMER — obsidian LCD panel with the Doto dot-matrix countdown ======= */}
-            {rest !== null && (
-              <div className="fixed left-1/2 -translate-x-1/2 w-full px-5 z-20" style={{ maxWidth: 480, bottom: "calc(env(safe-area-inset-bottom) + " + (session && tab !== "train" ? 148 : 92) + "px)" }}>
-                <div className="bl-cq rounded-3xl overflow-hidden" style={{ background: "#121214", border: "1px solid " + (restLeft === 0 ? A.a : "rgba(255,255,255,0.10)"), boxShadow: restLeft === 0 ? "0 0 34px -6px " + A.a + "cc" : "0 16px 40px -14px rgba(0,0,0,0.8)" }}>
-                  <div className="px-5 py-3.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 2, color: restLeft === 0 ? A.a : "#8A8A92" }}>{restLeft === 0 ? "REST COMPLETE" : "RESTING"}</div>
-                      {restLeft === 0
-                        ? <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 32, lineHeight: 1, letterSpacing: "0.02em", color: A.a, textShadow: "0 0 18px " + A.a + "aa" }}>GO!</div>
-                        : <DotoTimer text={Math.floor(restLeft / 60) + ":" + String(restLeft % 60).padStart(2, "0")} size={40} color={A.a} style={{ textShadow: "0 0 14px " + A.a + "88" }} />}
+            {/* ======= REST TIMER — full-screen takeover (flagship), collapses to a pill ======= */}
+            {rest !== null && restBig && (() => {
+              const done = restLeft === 0;
+              const frac = rest.total ? Math.min(1, Math.max(0, (rest.total - restLeft) / rest.total)) : 0;
+              const pct = Math.round(frac * 100);
+              const RS = 268, stroke = 10, r = (RS - stroke) / 2 - 4, circ = 2 * Math.PI * r;
+              return (
+                <div className="fixed inset-0 z-50 flex justify-center bl-fade" style={{ background: C.bg }}>
+                  {/* faint accent halo */}
+                  <div className="absolute pointer-events-none" aria-hidden="true" style={{ top: "18%", left: "50%", transform: "translateX(-50%)", width: 340, height: 340, borderRadius: "50%", background: "radial-gradient(circle," + A.a + (done ? "44" : "22") + ", transparent 70%)", filter: "blur(30px)" }} />
+                  <div className="relative w-full flex flex-col items-center" style={{ maxWidth: 480, paddingTop: "calc(env(safe-area-inset-top) + 20px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 28px)", paddingLeft: 24, paddingRight: 24 }}>
+                    {/* top bar */}
+                    <div className="w-full flex items-center justify-between">
+                      <div style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: 3, color: done ? A.a : C.dim }}>{restPaused ? "PAUSED" : done ? "REST COMPLETE" : "REST"}</div>
+                      <button onClick={() => setRestBig(false)} aria-label="Minimise rest timer" className="bl-spring active:scale-90 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: C.card }}><ChevronDown size={20} color={C.dim} /></button>
                     </div>
-                    <div className="flex gap-2 shrink-0">
-                      {restLeft > 0 && <button onClick={() => scheduleRest(rest.end + 30000, rest.total + 30)} className="px-3 py-2 rounded-full text-xs font-bold" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#FAFAFA" }}>+30s</button>}
-                      <button onClick={clearRest} className="px-3 py-2 rounded-full text-xs font-bold" style={{ background: restLeft === 0 ? A.a : "rgba(255,255,255,0.08)", border: "1px solid " + (restLeft === 0 ? A.a : "rgba(255,255,255,0.12)"), color: restLeft === 0 ? "#0D0E11" : "#FAFAFA" }}>
-                        {restLeft === 0 ? "Dismiss" : "Skip"}
-                      </button>
+
+                    {/* ring + digits */}
+                    <div className="relative flex items-center justify-center" style={{ width: RS, height: RS, marginTop: "min(9vh, 64px)" }}>
+                      <svg width={RS} height={RS} style={{ position: "absolute", transform: "rotate(-90deg)" }}>
+                        <circle cx={RS / 2} cy={RS / 2} r={r} fill="none" stroke={C.track} strokeWidth={stroke} />
+                        <circle cx={RS / 2} cy={RS / 2} r={r} fill="none" stroke={A.a} strokeWidth={stroke} strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={circ * (1 - frac)} style={{ transition: "stroke-dashoffset 0.25s linear" }} />
+                      </svg>
+                      <div className="flex flex-col items-center" style={{ width: RS - stroke * 2 - 24 }}>
+                        {done
+                          ? <div className={"bl-ring-pulse " + ""} style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 64, lineHeight: 1, letterSpacing: "-0.02em", color: A.a }}>Go!</div>
+                          : <DotoTimer text={Math.floor(restLeft / 60) + ":" + String(restLeft % 60).padStart(2, "0")} size={56} color={C.text} />}
+                        {!done && <div className="mt-2" style={{ fontFamily: F.mono, fontSize: 12, letterSpacing: 2, color: C.faint }}>{pct}% complete</div>}
+                      </div>
+                    </div>
+
+                    {/* controls */}
+                    <div className="w-full mt-auto">
+                      {done ? (
+                        <button onClick={clearRest} className="bl-spring active:scale-[0.98] w-full flex items-center justify-center rounded-full" style={{ height: 60, background: A.a }}>
+                          <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 18, color: "#0A0A0B" }}>Done</span>
+                        </button>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => addRest(30)} className="bl-spring active:scale-95 flex-1 flex items-center justify-center rounded-full" style={{ height: 56, background: C.card }}>
+                              <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>+30s</span>
+                            </button>
+                            <button onClick={restPaused ? resumeRest : pauseRest} className="bl-spring active:scale-95 flex items-center justify-center rounded-full shrink-0" style={{ width: 80, height: 56, background: A.a }}>
+                              <span style={{ fontFamily: F.body, fontWeight: 700, fontSize: 15, color: "#0A0A0B" }}>{restPaused ? "Resume" : "Pause"}</span>
+                            </button>
+                          </div>
+                          <button onClick={clearRest} className="w-full text-center mt-4 py-2" style={{ fontFamily: F.body, fontWeight: 600, fontSize: 14, color: C.faint }}>Skip rest</button>
+                        </>
+                      )}
                     </div>
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* minimised rest pill — tap to reopen the takeover */}
+            {rest !== null && !restBig && (
+              <div className="fixed left-1/2 -translate-x-1/2 w-full px-5 z-30" style={{ maxWidth: 480, bottom: "calc(env(safe-area-inset-bottom) + " + (session && tab !== "train" ? 148 : 92) + "px)" }}>
+                <div className="bl-cq rounded-3xl overflow-hidden liquid-glass" style={{ background: C.card2, boxShadow: restLeft === 0 ? "inset 0 0 0 1.5px " + A.a : "none" }}>
+                  <button onClick={() => setRestBig(true)} className="w-full px-5 py-3.5 flex items-center justify-between gap-3 text-left">
+                    <div className="min-w-0">
+                      <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 2, color: restLeft === 0 ? A.a : C.faint }}>{restPaused ? "PAUSED" : restLeft === 0 ? "REST COMPLETE" : "RESTING"}</div>
+                      {restLeft === 0
+                        ? <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 26, lineHeight: 1, color: A.a }}>Go!</div>
+                        : <DotoTimer text={Math.floor(restLeft / 60) + ":" + String(restLeft % 60).padStart(2, "0")} size={34} color={C.text} />}
+                    </div>
+                    <div className="flex gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+                      {restLeft > 0 && <span role="button" tabIndex={0} onClick={() => addRest(30)} className="px-3 py-2 rounded-full text-xs font-semibold" style={{ background: C.card, color: C.text }}>+30s</span>}
+                      <span role="button" tabIndex={0} onClick={clearRest} className="px-3 py-2 rounded-full text-xs font-semibold" style={{ background: restLeft === 0 ? A.a : C.card, color: restLeft === 0 ? "#0A0A0B" : C.text }}>{restLeft === 0 ? "Dismiss" : "Skip"}</span>
+                    </div>
+                  </button>
                   {restLeft > 0 && (
                     <div className="h-1" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full" style={{ width: (restLeft / rest.total) * 100 + "%", background: AG, transition: "width 0.25s linear" }} />
+                      <div className="h-full" style={{ width: ((rest.total - restLeft) / rest.total) * 100 + "%", background: A.a, transition: "width 0.25s linear" }} />
                     </div>
                   )}
                 </div>
