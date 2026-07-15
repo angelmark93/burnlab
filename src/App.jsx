@@ -905,23 +905,52 @@ function recommendProgram(p) {
 const Chip = ({ children, color, style }) => (
   <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: (color || C.dim) + "22", color: color || C.dim, fontFamily: F.mono, fontSize: 11, ...style }}>{children}</span>
 );
+/* Tiny letter-spaced label — one of the few places uppercase survives in Noir. */
 const SectionLabel = ({ children }) => (
   <div className="flex items-center gap-3 mb-3 mt-1">
-    <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: C.onBgDim, textTransform: "uppercase" }}>{children}</span>
+    <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 2, color: C.faint, textTransform: "uppercase" }}>{children}</span>
     <div className="flex-1 h-px" style={{ background: C.onLine }} />
   </div>
 );
-/* ScreenHead — the big editorial screen title on the near-black canvas: ultra-heavy upright Anton
-   filling the width, uppercase, with a small orange mono eyebrow + optional right-aligned figure. */
+/* ScreenHead — Noir screen title: sentence-case Plus Jakarta semibold, with a small grey kicker
+   above and an optional right-aligned figure. Calm, not shouting. */
 const ScreenHead = ({ eyebrow, title, right }) => (
   <div className="flex items-end justify-between mb-5 mt-1">
     <div className="min-w-0">
-      {eyebrow && <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: "#FF5722", textTransform: "uppercase", marginBottom: 4 }}>{eyebrow}</div>}
-      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 50, lineHeight: 0.9, letterSpacing: "0.01em", textTransform: "uppercase", color: C.onBg }}>{title}</div>
+      {eyebrow && <div style={{ fontFamily: F.body, fontSize: 13, fontWeight: 500, color: C.dim, marginBottom: 2 }}>{eyebrow}</div>}
+      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 30, lineHeight: 1.05, letterSpacing: "-0.02em", color: C.text }}>{title}</div>
     </div>
     {right != null && <div className="shrink-0 pb-1">{right}</div>}
   </div>
 );
+/* DateStrip — a row of quiet grey day numbers; the selected day is an accent pill that grows to
+   hold "Today, 15 Jul" (or the weekday+date). Trained past days get a small dot beneath. */
+function DateStrip({ trained, onToday }) {
+  const A = ACCENTS.ember;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+  const fmtPill = (d) => (d.toDateString() === today.toDateString() ? "Today, " : "") + d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return (
+    <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+      {days.map((d, i) => {
+        const isToday = d.toDateString() === today.toDateString();
+        const did = trained && trained.has(d.toDateString());
+        if (isToday) return (
+          <button key={i} onClick={onToday} className="shrink-0 flex items-center gap-1.5 rounded-full px-4" style={{ height: 44, background: A.a }}>
+            <span style={{ fontFamily: F.body, fontWeight: 700, fontSize: 14, color: "#0A0A0B", whiteSpace: "nowrap" }}>{fmtPill(d)}</span>
+          </button>
+        );
+        return (
+          <div key={i} className="shrink-0 flex flex-col items-center justify-center rounded-full" style={{ width: 44, height: 44 }}>
+            <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.dim, fontVariantNumeric: "tabular-nums" }}>{d.getDate()}</span>
+            <span style={{ width: 4, height: 4, borderRadius: 2, marginTop: 3, background: did ? A.a : "transparent" }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 /* Apple-Activity-style concentric rings: nested thick bands, glossy gradient,
    animated fill-in on mount, a glowing "cap" dot chasing the arc tip. */
 /* useCountUp — tick a number from its previous value up to `value` on mount/update.
@@ -957,14 +986,10 @@ function useCountUp(value, duration = DUR.hero) {
    container-query fluid sizing (`cqi`) so the digit string auto-scales to its card's width instead of
    overflowing — every .liquid-glass card is a size container. `size` is the MAX px; it shrinks in
    narrower containers and never clips. Never wrap a HeroNumber in a fixed-width / overflow-hidden box. */
-function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, color, glow = false, group = true, className = "", style = {} }) {
+function HeroNumber({ value, decimals = 0, prefix, suffix, denom, size = 56, accent, color, glow = false, group = true, className = "", style = {} }) {
   const animated = useCountUp(value);
-  let shown;
-  if (typeof value === "number") {
-    shown = group
-      ? animated.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
-      : animated.toFixed(decimals);
-  } else shown = value;
+  const fmt = (n) => group ? n.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).replace(/,/g, " ") : n.toFixed(decimals);
+  const shown = typeof value === "number" ? fmt(animated) : value;
   const A = accent;
   const inkColor = color || (A ? A.a : C.text);
   // clamp(min, cqi-of-container, max): at a ~340px container the cqi term ≈ size; narrower shrinks it.
@@ -972,8 +997,9 @@ function HeroNumber({ value, decimals = 0, prefix, suffix, size = 56, accent, co
   return (
     <span className={"inline-flex items-baseline min-w-0 max-w-full " + className} style={{ ...style }}>
       {prefix != null && <span style={{ fontFamily: F.body, fontWeight: 700, fontSize: "calc(" + fs + " * 0.34)", color: C.dim, marginRight: 3 }}>{prefix}</span>}
-      <span style={{ fontFamily: F.disp, fontSize: fs, lineHeight: 0.92, letterSpacing: "0.005em", fontVariantNumeric: "tabular-nums", color: inkColor, whiteSpace: "nowrap", filter: glow && A ? "drop-shadow(0 0 18px " + A.a + "44)" : "none" }}>{shown}</span>
-      {suffix != null && <span style={{ fontFamily: F.body, fontWeight: 700, fontSize: "calc(" + fs + " * 0.30)", color: C.dim, marginLeft: 5, alignSelf: "flex-end", paddingBottom: "calc(" + fs + " * 0.12)" }}>{suffix}</span>}
+      <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: fs, lineHeight: 0.95, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: inkColor, whiteSpace: "nowrap", filter: glow && A ? "drop-shadow(0 0 18px " + A.a + "44)" : "none" }}>{shown}</span>
+      {denom != null && <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: "calc(" + fs + " * 0.5)", color: C.faint, whiteSpace: "nowrap", letterSpacing: "-0.02em" }}>/{typeof denom === "number" ? fmt(denom) : denom}</span>}
+      {suffix != null && <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: "calc(" + fs + " * 0.30)", color: C.dim, marginLeft: 5, alignSelf: "flex-end", paddingBottom: "calc(" + fs + " * 0.12)" }}>{suffix}</span>}
     </span>
   );
 }
@@ -983,6 +1009,58 @@ function DotoTimer({ text, size = 48, color, className = "", style = {} }) {
   const fs = "clamp(" + Math.round(size * 0.6) + "px, " + (size / 3.4).toFixed(2) + "cqi, " + size + "px)";
   return (
     <span className={"inline-block " + className} style={{ fontFamily: F.timer, fontWeight: 700, fontSize: fs, lineHeight: 1, letterSpacing: "0.06em", fontVariantNumeric: "tabular-nums", color: color || C.text, whiteSpace: "nowrap", ...style }}>{text}</span>
+  );
+}
+/* MiniBars — a tiny row of rounded accent bars (e.g. sets-per-day). Values 0..1. */
+function MiniBars({ data, color, h = 34 }) {
+  const max = Math.max(1, ...data);
+  return (
+    <div className="flex items-end gap-[3px]" style={{ height: h }}>
+      {data.map((v, i) => (
+        <div key={i} style={{ width: 5, height: Math.max(3, (v / max) * h), background: color, borderRadius: 3, opacity: v ? 1 : 0.3 }} />
+      ))}
+    </div>
+  );
+}
+/* MiniSpark — a small mint sparkline with a soft gradient fill (water / weight trend). */
+function MiniSpark({ data, color, w = 74, h = 34 }) {
+  if (!data || data.length < 2) return <div style={{ width: w, height: h }} />;
+  const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
+  const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - 2 - ((v - min) / range) * (h - 4)]);
+  const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const area = line + " L" + w + " " + h + " L0 " + h + " Z";
+  const gid = "sp" + Math.round(w) + Math.round(data[0] * 100);
+  return (
+    <svg width={w} height={h} aria-hidden="true">
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.35" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+      <path d={area} fill={"url(#" + gid + ")"} />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r="2.5" fill={color} />
+    </svg>
+  );
+}
+/* MetricCard — the 2-col Home/Progress tile: tinted icon circle + label + chevron on top, a bold
+   value + small unit (or denominator) below, and an optional mini chart on the right. Tappable. */
+function MetricCard({ icon: Icon, label, value, unit, denom, chart, onClick, tint, i = 0 }) {
+  const A = ACCENTS.ember;
+  const t = tint || A.a;
+  const Tag = onClick ? "button" : "div";
+  return (
+    <Tag onClick={onClick} className={"liquid-glass bl-stagger rounded-3xl p-4 text-left w-full " + (onClick ? "bl-spring active:scale-[0.97]" : "")} style={{ "--i": i }}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 28, height: 28, background: t + "22" }}><Icon size={15} color={t} /></span>
+          <span className="truncate" style={{ fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.dim }}>{label}</span>
+        </span>
+        {onClick && <ChevronRight size={16} color={C.faint} className="shrink-0" />}
+      </div>
+      <div className="flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <HeroNumber value={value} suffix={unit} denom={denom} size={30} />
+        </div>
+        {chart && <div className="shrink-0">{chart}</div>}
+      </div>
+    </Tag>
   );
 }
 /* Dev-only clip test matrix (visit #numtest). Renders every hero figure across the required value
@@ -1044,22 +1122,20 @@ function HeroArc({ value, max = 100, size = 236, label, sublabel, accent, unit }
   const trackPath = "M " + sx + " " + sy + " A " + r + " " + r + " 0 " + (SWEEP > 180 ? 1 : 0) + " 1 " + ex + " " + ey;
   return (
     <div className="relative flex items-center justify-center mx-auto" style={{ width: size, height: size }}>
-      <div className="bl-heroglow absolute rounded-full" style={{ width: size * 0.72, height: size * 0.72, background: A.a, filter: "blur(56px)" }} aria-hidden="true" />
+      {/* the one permitted glow — a faint accent halo behind the ring */}
+      <div className="bl-heroglow absolute rounded-full" style={{ width: size * 0.6, height: size * 0.6, background: A.a, filter: "blur(60px)", opacity: 0.5 }} aria-hidden="true" />
       <svg width={size} height={size} className="relative" style={{ overflow: "visible" }} aria-hidden="true">
-        <defs>
-          <linearGradient id="heroarc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={A.b} /><stop offset="100%" stopColor={A.a} /></linearGradient>
-        </defs>
-        <path d={trackPath} fill="none" stroke={C.card2} strokeWidth={stroke} strokeLinecap="round" />
-        <path d={trackPath} fill="none" stroke="url(#heroarc)" strokeWidth={stroke} strokeLinecap="round"
-          strokeDasharray={(arcLen * pct) + " " + (arcLen * 2)} style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.22,0.9,0.3,1)", filter: "drop-shadow(0 0 12px " + A.a + "cc)" }} />
+        <path d={trackPath} fill="none" stroke={C.track} strokeWidth={stroke} strokeLinecap="round" />
+        <path d={trackPath} fill="none" stroke={C.vizCal} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={(arcLen * pct) + " " + (arcLen * 2)} style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.22,0.9,0.3,1)" }} />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <div className="flex items-start">
-          <span style={{ fontFamily: F.disp, fontSize: size * 0.36, lineHeight: 1.05, letterSpacing: -1, color: C.text }}>{typeof value === "number" ? Math.round(shown) : value}</span>
-          {unit && <span style={{ fontFamily: F.disp, fontSize: size * 0.14, color: A.a, marginTop: 4, marginLeft: 3 }}>{unit}</span>}
+        <div className="flex items-baseline">
+          <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: size * 0.3, lineHeight: 1, letterSpacing: "-0.03em", color: C.text }}>{typeof value === "number" ? Math.round(shown) : value}</span>
+          {unit && <span style={{ fontFamily: F.disp, fontWeight: 600, fontSize: size * 0.12, color: C.dim, marginLeft: 2 }}>{unit}</span>}
         </div>
-        {label && <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 3, color: C.faint, marginTop: 8 }}>{label}</span>}
-        {sublabel && <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: 1, color: A.a, marginTop: 3 }}>{sublabel}</span>}
+        {label && <span style={{ fontFamily: F.body, fontWeight: 500, fontSize: 12, color: C.dim, marginTop: 4 }}>{label}</span>}
+        {sublabel && <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 11, color: C.faint, marginTop: 2 }}>{sublabel}</span>}
       </div>
     </div>
   );
