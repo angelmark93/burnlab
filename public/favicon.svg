@@ -1,8 +1,8 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" rx="112" fill="#0D0E11"/>
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" rx="112" fill="#0A0A0B"/>
   <defs>
     <linearGradient id="g" x1="0" y1="1" x2="0.6" y2="0">
-      <stop offset="0" stop-color="#FF4D2E"/>
-      <stop offset="1" stop-color="#FFB13D"/>
+      <stop offset="0" stop-color="#C4EE3A"/>
+      <stop offset="1" stop-color="#E9FBA0"/>
     </linearGradient>
   </defs>
   <path d="M256 88
@@ -14,7 +14,7 @@
   <path d="M256 260
            C 232 292, 212 312, 212 344
            A 44 44 0 0 0 300 344
-           C 300 316, 278 296, 256 260 Z" fill="#0D0E11"/>
+           C 300 316, 278 296, 256 260 Z" fill="#0A0A0B"/>
   <path d="M256 300
            C 244 316, 236 326, 236 342
            A 20 20 0 0 0 276 342

@@ -2,6 +2,19 @@
 
 Science-based workout tracker built with Vite + React + Tailwind. Installable PWA with offline support. All data (profile, workouts, trophies) lives in the browser's localStorage on your device — no backend.
 
+## What's new in v8.0 — "Noir"
+
+A complete visual rebuild on a flat near-black canvas (`#0A0A0B`) — no screen is recognisable from the old app, but every feature and every byte of stored data (storage keys `burnlab-data-v2` / `burnlab-photos-v1` and the data model) is untouched.
+
+- **Design system** — solid tonal surfaces (`#17181B` / `#1F2024`) with **no visible borders** (separation by tone), one electric-lime **Volt** accent (`#D6F25F`) with **black text/icons on accent always**, and dedicated data-viz colours (calorie-ring orange `#F28C33`, water/weight mint `#7BE0C3`). Radius 12/20/28, a 4px grid and a 20px screen gutter.
+- **Typography** — retired Barlow/Orbitron for one friendly geometric grotesque, **Plus Jakarta Sans** (self-hosted variable font), everywhere. **Sentence case** across the whole app ("Hi, Alex", "Start workout"); uppercase survives only in tiny letter-spaced labels. Hero metrics use a big value + grey `/denominator` pattern, tabular figures and thin-space thousands. The rest-timer keeps its **Doto** dot-matrix face.
+- **Flagship full-screen rest timer** — a takeover with huge Doto digits inside a sweeping progress ring, live "% complete", and accent **Pause / +30s / Skip**. Collapses to a minimised pill (that coexists cleanly with the nav) and reopens on tap; wall-clock accurate through a locked screen as before.
+- **Home** — greeting → date strip (accent "Today" pill) → orange hero burn-ring → 2-column metric cards (sets, water, weight, streak with mini bars/sparklines) → up-next card → quiet trophy-points teaser.
+- **Water tracking (new)** — a Fuel water card logs real intake in +250 ml taps with an 8-cup tracker, stored additively in the existing data model (auto-included in export/import).
+- **Restyled charts** — no gridlines, rounded gradient bar tops, glowing trend lines, mono axes and soft surface-2 tooltips. Settings gains a stat-chips row; onboarding uses accent selection cards and progress dots.
+- **New identity** — a lime flame app icon, splash mark and manifest/theme colours.
+- **Clip-proof numbers (kept)** — every headline figure is sized with container-query units so it shrinks to its card instead of truncating; verified against `9 → 199,999`, `112.25`, `0:07`/`20:30` at 320 / 375 / 430 px.
+
 ## What's new in v7.0 — "Editorial Inversion"
 
 A ground-up visual rebrand: stark **white cards on a near-black canvas**, near-black ink type, one scarce orange accent (glows, the timer, arrows — nothing else).
@@ -104,7 +117,7 @@ Local dev: `npm install`, then `npm run dev`.
 
 ## Updating after changes
 
-Bump `CACHE` in `public/sw.js` (currently `burnlab-v15`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
+Bump `CACHE` in `public/sw.js` (currently `burnlab-v16`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
 
 ## Notes
 

@@ -12,10 +12,10 @@ export const BurnLabLogo = ({ className = "h-8" }) => {
         className="h-full w-auto transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
       >
         <defs>
-          {/* High-voltage athletic orange gradient */}
+          {/* Volt lime gradient — Noir accent */}
           <linearGradient id="logo-orange-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#FF3E00" />
-            <stop offset="100%" stopColor="#FF7A00" />
+            <stop offset="0%" stopColor="#C4EE3A" />
+            <stop offset="100%" stopColor="#E9FBA0" />
           </linearGradient>
 
           {/* Subtle glow filter that activates on group hover */}
@@ -35,10 +35,10 @@ export const BurnLabLogo = ({ className = "h-8" }) => {
           className="opacity-0 group-hover:opacity-30 transition-opacity duration-500 blur-sm"
         />
 
-        {/* The 'L' (Lab Pillar) — crisp surgical white */}
+        {/* The 'L' (Lab Pillar) — crisp light ink */}
         <path
           d="M 28 16 L 28 80 L 48 80"
-          stroke="#FFFFFF"
+          stroke="#F4F4F2"
           strokeWidth="10"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -58,8 +58,8 @@ export const BurnLabLogo = ({ className = "h-8" }) => {
 
       {/* Typographic editorial wordmark */}
       <div className="flex flex-col justify-center">
-        <div className="flex items-baseline tracking-tighter uppercase font-extrabold text-lg leading-none">
-          <span className="text-white group-hover:text-orange-500 transition-colors duration-300">BURN</span>
+        <div className="flex items-baseline tracking-tight uppercase font-extrabold text-lg leading-none">
+          <span className="text-white transition-colors duration-300">BURN</span>
           <span className="text-zinc-500 group-hover:text-white transition-colors duration-300">LAB</span>
         </div>
         <span className="text-[7px] tracking-[0.25em] text-zinc-600 uppercase font-bold leading-none mt-1">

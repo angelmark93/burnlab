@@ -1250,7 +1250,7 @@ function Toggle({ on, onChange, label }) {
 }
 const GradBtn = ({ A, onClick, children, className = "", style = {} }) => (
   <button onClick={e => { if (vibrateEnabled) haptic("light"); if (onClick) onClick(e); }} className={"font-bold transition-all active:scale-95 active:brightness-90 " + className}
-    style={{ background: "linear-gradient(90deg," + A.a + "," + A.b + ")", color: "#0D0E11", boxShadow: SHADOW.glow(A.a), ...style }}>{children}</button>
+    style={{ background: "linear-gradient(90deg," + A.a + "," + A.b + ")", color: "#0A0A0B", boxShadow: SHADOW.glow(A.a), ...style }}>{children}</button>
 );
 
 /* ================= ONBOARDING ================= */
@@ -2146,8 +2146,8 @@ export default function BurnLabApp() {
             {[photos[0], photos[photos.length - 1]].map((p, i) => (
               <button key={p.id} onClick={() => setPhotoView(i === 0 ? 0 : photos.length - 1)} className="relative rounded-xl overflow-hidden" style={{ border: "1px solid " + C.line }}>
                 <img src={p.img} alt={(i === 0 ? "First" : "Latest") + " progress photo"} className="w-full object-cover" style={{ height: 170 }} />
-                <span className="absolute top-1.5 left-1.5 text-xs font-bold px-2 py-0.5 rounded" style={{ background: "#0D0E11CC", color: i === 0 ? C.dim : A.a, fontFamily: F.mono, fontSize: 9 }}>{i === 0 ? "DAY ONE" : "LATEST"}</span>
-                <span className="absolute bottom-1.5 left-1.5 text-xs px-2 py-0.5 rounded" style={{ background: "#0D0E11CC", color: C.text, fontFamily: F.mono, fontSize: 9 }}>{dayLabel(p.date)}{p.weightKg ? " · " + fmtKg(p.weightKg) + "kg" : ""}</span>
+                <span className="absolute top-1.5 left-1.5 text-xs font-bold px-2 py-0.5 rounded" style={{ background: "#0A0A0BCC", color: i === 0 ? C.dim : A.a, fontFamily: F.mono, fontSize: 9 }}>{i === 0 ? "DAY ONE" : "LATEST"}</span>
+                <span className="absolute bottom-1.5 left-1.5 text-xs px-2 py-0.5 rounded" style={{ background: "#0A0A0BCC", color: C.text, fontFamily: F.mono, fontSize: 9 }}>{dayLabel(p.date)}{p.weightKg ? " · " + fmtKg(p.weightKg) + "kg" : ""}</span>
               </button>
             ))}
           </div>
@@ -2166,7 +2166,7 @@ export default function BurnLabApp() {
         )}
         {photos.length === 0 && <p className="text-sm mb-3" style={{ color: C.dim }}>Track the change the scales can't show. Photos are compressed and stored only on this device - same spot, same light, same pose works best.</p>}
         <div className="flex items-center justify-between">
-          <button onClick={() => fileRef.current && fileRef.current.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm" style={{ background: AG, color: "#0D0E11" }}>
+          <button onClick={() => fileRef.current && fileRef.current.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm" style={{ background: AG, color: "#0A0A0B" }}>
             <Camera size={15} /> Add photo
           </button>
           <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{photos.length} STORED · {data.settings.photoCadence.toUpperCase()} REMINDERS</span>
@@ -2186,8 +2186,16 @@ export default function BurnLabApp() {
 
         {/* ======= SPLASH ======= */}
         {splash && (
-          <div className={"fixed inset-0 z-50 flex flex-col items-center justify-center " + (splash === "out" ? "bl-gone" : "")} style={{ background: "#000000" }}>
-            <div className="bl-splash-in" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 36, letterSpacing: 4 }}>
+          <div className={"fixed inset-0 z-50 flex flex-col items-center justify-center " + (splash === "out" ? "bl-gone" : "")} style={{ background: C.bg }}>
+            <div className="bl-splash-in" style={{ marginBottom: 22 }}>
+              <svg width="76" height="76" viewBox="0 0 512 512" aria-hidden="true">
+                <defs><linearGradient id="splashG" x1="0" y1="1" x2="0.6" y2="0"><stop offset="0" stopColor="#C4EE3A" /><stop offset="1" stopColor="#E9FBA0" /></linearGradient></defs>
+                <path d="M256 88 C 210 160, 150 208, 150 296 A 106 106 0 0 0 362 296 C 362 232, 322 190, 300 148 C 292 190, 276 204, 256 216 C 268 172, 264 128, 256 88 Z" fill="url(#splashG)" />
+                <path d="M256 260 C 232 292, 212 312, 212 344 A 44 44 0 0 0 300 344 C 300 316, 278 296, 256 260 Z" fill={C.bg} />
+                <path d="M256 300 C 244 316, 236 326, 236 342 A 20 20 0 0 0 276 342 C 276 328, 266 318, 256 300 Z" fill="url(#splashG)" opacity="0.9" />
+              </svg>
+            </div>
+            <div className="bl-splash-in" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 34, letterSpacing: 3, color: C.text }}>
               BURN<span className="bl-shimmer" style={{ backgroundImage: SHIMMER }}>LAB</span>
             </div>
             <div className="bl-splash-sub" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 4, marginTop: 10 }}>TRAIN · FUEL · PROGRESS</div>
@@ -2518,7 +2526,7 @@ export default function BurnLabApp() {
                                 className="shrink-0 flex items-center justify-center transition-all"
                                 style={{ minWidth: active ? 34 : 26, height: 26, borderRadius: RADIUS.pill, padding: active ? "0 10px" : 0,
                                   background: active ? AG : done ? C.green + "22" : C.card2, border: "1px solid " + (active ? "transparent" : done ? C.green + "55" : C.line) }}>
-                                {done && !active ? <Check size={12} color={C.green} /> : <span style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: active ? "#0D0E11" : C.dim }}>{xi + 1}</span>}
+                                {done && !active ? <Check size={12} color={C.green} /> : <span style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: active ? "#0A0A0B" : C.dim }}>{xi + 1}</span>}
                               </button>
                             );
                           })}
@@ -2759,7 +2767,7 @@ export default function BurnLabApp() {
                                   <span className="font-bold text-sm" style={{ color: C.text }}>{label}</span>
                                   {kc > 0 && <span className="ml-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{fmtNum(Math.round(kc))} kcal</span>}
                                 </div>
-                                <button onClick={() => { setAddFor(slot); setAddStage("search"); }} aria-label={"Add food to " + label} className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ background: AG }}><Plus size={16} color="#0D0E11" strokeWidth={2.6} /></button>
+                                <button onClick={() => { setAddFor(slot); setAddStage("search"); }} aria-label={"Add food to " + label} className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ background: AG }}><Plus size={16} color="#0A0A0B" strokeWidth={2.6} /></button>
                               </div>
                               {items.length > 0 && (
                                 <div className="px-4 pb-2" style={{ borderTop: "1px solid " + C.line }}>
@@ -3216,7 +3224,7 @@ export default function BurnLabApp() {
                           return (
                             <div key={g.key} className="mb-4">
                               <div className="flex items-center justify-between px-1 mb-2">
-                                <span style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 16, letterSpacing: 0.5, color: C.onBg }}>{g.label.toUpperCase()}</span>
+                                <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em", color: C.text }}>{g.label}</span>
                                 <span style={{ fontFamily: F.mono, fontSize: 9.5, color: C.onBgFaint, letterSpacing: 1 }}>{g.items.length} {g.items.length === 1 ? "SESSION" : "SESSIONS"} · {sets} SETS</span>
                               </div>
                               {g.items.map((h, i) => (
@@ -3240,9 +3248,9 @@ export default function BurnLabApp() {
 
             {/* ======= RESUME PILL (session active, other tab) ======= */}
             {session && tab !== "train" && (
-              <button onClick={() => setTab("train")} className="fixed left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-xs shadow-lg"
-                style={{ bottom: "calc(env(safe-area-inset-bottom) + 86px)", background: AG, color: "#0D0E11", fontFamily: F.mono, letterSpacing: 1 }}>
-                <Play size={13} fill="#0D0E11" /> WORKOUT IN PROGRESS - RESUME
+              <button onClick={() => setTab("train")} className="fixed left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-3 rounded-full text-sm"
+                style={{ bottom: "calc(env(safe-area-inset-bottom) + 86px)", background: A.a, color: "#0A0A0B", fontFamily: F.body, fontWeight: 700 }}>
+                <Play size={14} fill="#0A0A0B" /> Resume workout
               </button>
             )}
 
@@ -3389,7 +3397,7 @@ export default function BurnLabApp() {
             {/* ======= EXERCISE DETAIL MODAL ======= */}
             {detail && (
               <div className="fixed inset-0 z-40 flex items-end justify-center" style={{ background: "#000000aa" }} onClick={() => setDetail(null)}>
-                <div className="w-full rounded-t-3xl p-5 bl-fade overflow-y-auto" style={{ maxWidth: 480, maxHeight: "85vh", background: "#FFFFFF", color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
+                <div className="w-full rounded-t-3xl p-5 bl-fade overflow-y-auto" style={{ maxWidth: 480, maxHeight: "85vh", background: C.card, color: C.text }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex items-start gap-3">
                       <div className="rounded-2xl p-1.5 shrink-0" style={{ background: C.card2, border: "1px solid " + C.line }}><Picto ex={detail} size={72} /></div>
@@ -3469,7 +3477,7 @@ export default function BurnLabApp() {
                           className="flex-1 bg-transparent" style={{ fontSize: 16, color: C.text, border: "none", outline: "none", minWidth: 0 }} />
                       </div>
                       <button onClick={() => { setScanNonce(n => n + 1); setScanOpen(true); }} aria-label="Scan a barcode" className="shrink-0 rounded-xl flex items-center justify-center" style={{ width: 46, background: AG }}>
-                        <ScanLine size={19} color="#0D0E11" strokeWidth={2.4} />
+                        <ScanLine size={19} color="#0A0A0B" strokeWidth={2.4} />
                       </button>
                     </div>
                     <div className="flex gap-2 mb-3">
@@ -3554,7 +3562,7 @@ export default function BurnLabApp() {
                         ))}
                       </div>
                     ); })()}
-                    <GradBtn A={A} onClick={addPortion} className="w-full py-3 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 18, letterSpacing: 1 }}>ADD TO {(MEAL_SLOTS.find(m => m[0] === addFor) || ["", ""])[1].toUpperCase()}</GradBtn>
+                    <GradBtn A={A} onClick={addPortion} className="w-full rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Add to {(MEAL_SLOTS.find(m => m[0] === addFor) || ["", ""])[1]}</GradBtn>
                   </>)}
 
                   {addStage === "quick" && (<>
@@ -3571,7 +3579,7 @@ export default function BurnLabApp() {
                         </div>
                       ))}
                     </div>
-                    <GradBtn A={A} onClick={addQuick} className="w-full py-3 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 18, letterSpacing: 1 }}>ADD</GradBtn>
+                    <GradBtn A={A} onClick={addQuick} className="w-full rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Add</GradBtn>
                   </>)}
 
                   {addStage === "create" && (<>
@@ -3592,7 +3600,7 @@ export default function BurnLabApp() {
                       ))}
                     </div>
                     <input type="number" inputMode="decimal" value={customF.sg} onChange={e => setCustomF({ ...customF, sg: e.target.value })} placeholder="Typical serving in grams (optional)" className="w-full rounded-xl px-4 py-3 mb-4" style={{ fontSize: 16, background: C.card, border: "1px solid " + C.line, color: C.text }} />
-                    <GradBtn A={A} onClick={createCustom} className="w-full py-3 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 18, letterSpacing: 1 }}>SAVE & PICK PORTION</GradBtn>
+                    <GradBtn A={A} onClick={createCustom} className="w-full rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Save &amp; pick portion</GradBtn>
                   </>)}
                 </div>
               </div>
@@ -3639,7 +3647,7 @@ export default function BurnLabApp() {
                   <p className="text-sm" style={{ color: "#E8E6E1" }}>{scanMsg}</p>
                   {scanDead && (
                     <div className="flex gap-2 mt-4">
-                      <button onClick={() => { setScanDead(false); setScanNonce(n => n + 1); }} className="flex-1 py-3 rounded-2xl font-bold text-sm" style={{ background: AG, color: "#0D0E11" }}>Scan again</button>
+                      <button onClick={() => { setScanDead(false); setScanNonce(n => n + 1); }} className="flex-1 py-3 rounded-2xl font-bold text-sm" style={{ background: AG, color: "#0A0A0B" }}>Scan again</button>
                       <button onClick={stopScan} className="flex-1 py-3 rounded-2xl font-bold text-sm" style={{ background: "#ffffff14", border: "1px solid #ffffff33", color: "#fff" }}>Search by name</button>
                     </div>
                   )}
@@ -3652,7 +3660,7 @@ export default function BurnLabApp() {
               <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000aa" }} onClick={() => setWeighOpen(false)}>
                 <div className="w-full rounded-3xl p-5 bl-fade" style={{ maxWidth: 360, background: C.card2, color: C.text, border: "1px solid " + C.line }} onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-between mb-1">
-                    <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24 }}>WEIGH-IN</div>
+                    <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 24, letterSpacing: "-0.02em", color: C.text }}>Weigh-in</div>
                     <button onClick={() => setWeighOpen(false)} className="p-2 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Close"><X size={15} color={C.dim} /></button>
                   </div>
                   <p className="text-sm mb-4" style={{ color: C.dim }}>{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}{weighedToday ? " - this replaces today's entry" : ""}</p>
@@ -3661,7 +3669,7 @@ export default function BurnLabApp() {
                       className="rounded-2xl px-4 py-3 text-center font-bold" style={{ width: 150, fontSize: 32, fontFamily: F.disp, background: C.card, border: "1px solid " + C.line, color: C.text }} />
                     <span style={{ fontFamily: F.mono, fontSize: 14, color: C.dim }}>kg</span>
                   </div>
-                  <GradBtn A={A} onClick={logWeight} className="w-full py-3 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 18, letterSpacing: 1 }}>SAVE</GradBtn>
+                  <GradBtn A={A} onClick={logWeight} className="w-full rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Save</GradBtn>
                   <p className="text-xs mt-3 text-center" style={{ color: C.faint }}>Updates your calorie targets and BMI automatically.</p>
                 </div>
               </div>
@@ -3759,7 +3767,7 @@ export default function BurnLabApp() {
                       ))}
                     </div>
                   )}
-                  <GradBtn A={A} onClick={() => { setSummary(null); setTab("home"); }} className="w-full mt-5 py-3 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 18, letterSpacing: 1 }}>DONE</GradBtn>
+                  <GradBtn A={A} onClick={() => { setSummary(null); setTab("home"); }} className="w-full mt-5 rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Done</GradBtn>
                 </div>
               </div>
             )}
@@ -3778,7 +3786,7 @@ export default function BurnLabApp() {
                       </div>
                     ))}
                   </div>
-                  <GradBtn A={A} onClick={() => setTrophyToast(null)} className="w-full mt-4 py-3 rounded-2xl" style={{ fontFamily: F.disp, fontSize: 18, letterSpacing: 1 }}>NICE</GradBtn>
+                  <GradBtn A={A} onClick={() => setTrophyToast(null)} className="w-full mt-4 rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Nice</GradBtn>
                 </div>
               </div>
             )}
