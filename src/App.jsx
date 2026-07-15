@@ -1268,17 +1268,19 @@ function Onboarding({ A, onDone }) {
   const AG = "linear-gradient(90deg," + A.a + "," + A.b + ")";
 
   const inputStyle = { background: C.card, border: "1px solid " + C.line, color: C.text, fontSize: 16, fontFamily: F.body };
-  const Opt = ({ k, v, title, sub }) => (
-    <button onClick={() => set(k, v)} className="w-full text-left rounded-2xl px-4 py-3.5 mb-2 transition-colors"
-      style={{ background: C.card, border: "1px solid " + (p[k] === v ? A.a : "rgba(0,0,0,0.06)"), boxShadow: p[k] === v ? "0 0 0 1px " + A.a + ", 0 8px 22px -10px " + A.a + "66" : SHADOW.card }}>
-      <div className="font-semibold" style={{ fontSize: 15, color: C.text }}>{title}</div>
-      {sub && <div className="text-sm mt-0.5" style={{ color: C.dim }}>{sub}</div>}
-    </button>
-  );
+  const Opt = ({ k, v, title, sub }) => {
+    const on = p[k] === v;
+    return (
+      <button onClick={() => set(k, v)} className={"w-full text-left rounded-2xl px-4 py-3.5 mb-2 bl-spring active:scale-[0.99] " + (on ? "liquid-glass-active" : "liquid-glass")}>
+        <div className="font-semibold" style={{ fontSize: 15, color: on ? C.text : C.dim }}>{title}</div>
+        {sub && <div className="text-sm mt-0.5" style={{ color: C.dim }}>{sub}</div>}
+      </button>
+    );
+  };
   const H = ({ kicker, title, sub }) => (
     <div className="mb-5">
       <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2.5 }}>{kicker}</div>
-      <div style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 24, lineHeight: 1.25, marginTop: 4 }}>{title}</div>
+      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 26, letterSpacing: "-0.02em", lineHeight: 1.15, marginTop: 6, color: C.text }}>{title}</div>
       {sub && <p className="text-sm mt-2" style={{ color: C.dim }}>{sub}</p>}
     </div>
   );
@@ -1408,7 +1410,7 @@ function Onboarding({ A, onDone }) {
           <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: A.a + "14", border: "1px solid " + A.a + "44" }}>
             <div>
               <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 1.5 }}>YOUR PLAN</div>
-              <div className="font-bold" style={{ fontFamily: F.disp, fontSize: 20 }}>{PROGRAMS[recommendProgram(p)].name.toUpperCase()}</div>
+              <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 20, letterSpacing: "-0.02em", color: C.text }}>{PROGRAMS[recommendProgram(p)].name}</div>
             </div>
             <Chip color={A.a}>{GYM_LABEL[p.gym]}</Chip>
           </div>
@@ -1425,14 +1427,14 @@ function Onboarding({ A, onDone }) {
       <div className="pt-4">
         {step < 7 ? (
           <button onClick={() => valid && setStep(step + 1)} disabled={!valid}
-            className="w-full py-3.5 rounded-2xl font-bold transition-transform active:scale-95"
-            style={{ background: valid ? AG : C.card2, color: valid ? "#0D0E11" : C.faint, fontFamily: F.disp, fontSize: 19, letterSpacing: 1 }}>
-            {step === 0 ? "LET'S GO" : "CONTINUE"}
+            className="w-full rounded-full transition-transform active:scale-[0.98]"
+            style={{ height: 56, background: valid ? A.a : C.card2, color: valid ? "#0A0A0B" : C.faint, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>
+            {step === 0 ? "Let's go" : "Continue"}
           </button>
         ) : (
-          <button onClick={finish} className="w-full py-3.5 rounded-2xl font-bold transition-transform active:scale-95"
-            style={{ background: AG, color: "#0D0E11", fontFamily: F.disp, fontSize: 19, letterSpacing: 1 }}>
-            ENTER BURNLAB
+          <button onClick={finish} className="w-full rounded-full transition-transform active:scale-[0.98]"
+            style={{ height: 56, background: A.a, color: "#0A0A0B", fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>
+            Enter BurnLab
           </button>
         )}
         {step === 0 && <button onClick={() => onDone(null)} className="w-full text-center mt-3 text-sm" style={{ color: C.faint }}>Skip for now</button>}
@@ -2346,7 +2348,7 @@ export default function BurnLabApp() {
                     <button onClick={() => setTab("home")} aria-label="Back to home" className="p-2 rounded-full" style={{ background: C.card, border: "1px solid " + C.line }}><ChevronLeft size={18} color={C.dim} /></button>
                     <div>
                       <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>RECOVERY & LOAD</div>
-                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 30, textTransform: "uppercase", lineHeight: 1 }}>Muscle Map</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", lineHeight: 1, color: C.text }}>Muscle map</div>
                     </div>
                   </div>
 
@@ -2886,10 +2888,9 @@ export default function BurnLabApp() {
                             <div className="mt-1 -mx-1">
                               <ResponsiveContainer width="100%" height={160}>
                                 <LineChart data={pts} margin={{ top: 12, right: 8, left: -22, bottom: 0 }}>
-                                  <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
-                                  <XAxis dataKey="d" tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={{ stroke: C.line }} tickLine={false} minTickGap={22} />
-                                  <YAxis tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
-                                  <Tooltip contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} labelStyle={{ color: C.dim }} formatter={(v, n) => [v + " kg", n === "trend" ? "trend" : "scale"]} />
+                                  <XAxis dataKey="d" tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} minTickGap={22} />
+                                  <YAxis tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                                  <Tooltip contentStyle={{ background: C.card2, border: "none", borderRadius: 12, fontFamily: F.mono, fontSize: 12, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.7)" }} labelStyle={{ color: C.dim }} formatter={(v, n) => [v + " kg", n === "trend" ? "trend" : "scale"]} />
                                   <Line type="linear" dataKey="scale" stroke={C.faint} strokeWidth={1.5} dot={{ fill: C.faint, r: 2.5, strokeWidth: 0 }} activeDot={{ r: 4 }} />
                                   <Line type="monotone" dataKey="trend" stroke={A.a} strokeWidth={3} dot={false} activeDot={{ r: 5 }} style={{ filter: "drop-shadow(0 0 5px " + A.a + "aa)" }} />
                                 </LineChart>
@@ -3043,7 +3044,7 @@ export default function BurnLabApp() {
                     <>
                       <div className="liquid-glass rounded-3xl p-6 text-center mb-4">
                         <TrendingUp size={28} color={C.faint} className="mx-auto mb-2" />
-                        <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 24, textTransform: "uppercase", color: C.text }}>NO DATA YET</div>
+                        <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>No data yet</div>
                         <p className="text-sm mt-1" style={{ color: C.dim }}>Finish your first workout and your strength curves start here.</p>
                       </div>
                       <SectionLabel>PROGRESS PHOTOS</SectionLabel>
@@ -3068,10 +3069,9 @@ export default function BurnLabApp() {
                           <div className="liquid-glass rounded-3xl p-3 mb-5">
                             <ResponsiveContainer width="100%" height={190}>
                               <LineChart data={pts} margin={{ top: 10, right: 10, left: -18, bottom: 0 }}>
-                                <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
-                                <XAxis dataKey="d" tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={{ stroke: C.line }} tickLine={false} />
+                                <XAxis dataKey="d" tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
-                                <Tooltip contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} labelStyle={{ color: C.dim }} formatter={v => [v + " kg", "e1RM"]} />
+                                <Tooltip contentStyle={{ background: C.card2, border: "none", borderRadius: 12, fontFamily: F.mono, fontSize: 12, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.7)" }} labelStyle={{ color: C.dim }} formatter={v => [v + " kg", "e1RM"]} />
                                 <Line type="monotone" dataKey="v" stroke={A.a} strokeWidth={2.5} dot={{ fill: A.a, r: 3.5, strokeWidth: 0 }} activeDot={{ r: 5 }} />
                               </LineChart>
                             </ResponsiveContainer>
@@ -3125,11 +3125,16 @@ export default function BurnLabApp() {
                               <div className="mt-2 -mx-1">
                                 <ResponsiveContainer width="100%" height={150}>
                                   <BarChart data={pts} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
-                                    <CartesianGrid stroke={C.line} strokeDasharray="3 6" vertical={false} />
-                                    <XAxis dataKey="d" tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={{ stroke: C.line }} tickLine={false} minTickGap={16} />
-                                    <YAxis tick={{ fontSize: 9.5, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} />
-                                    <Tooltip cursor={{ fill: C.line + "55" }} contentStyle={{ background: C.card2, border: "1px solid " + C.line, borderRadius: 10, fontFamily: F.mono, fontSize: 12 }} formatter={v => [fmtNum(v) + " " + unit, byWeek ? "week" : "session"]} />
-                                    <Bar dataKey="v" fill={A.b} radius={[4, 4, 0, 0]} maxBarSize={26} />
+                                    <defs>
+                                      <linearGradient id="blBarFill" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor={A.b} />
+                                        <stop offset="100%" stopColor={A.a} stopOpacity={0.55} />
+                                      </linearGradient>
+                                    </defs>
+                                    <XAxis dataKey="d" tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} minTickGap={16} />
+                                    <YAxis tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} />
+                                    <Tooltip cursor={{ fill: C.line + "55" }} contentStyle={{ background: C.card2, border: "none", borderRadius: 12, fontFamily: F.mono, fontSize: 12, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.7)" }} formatter={v => [fmtNum(v) + " " + unit, byWeek ? "week" : "session"]} />
+                                    <Bar dataKey="v" fill="url(#blBarFill)" radius={[6, 6, 0, 0]} maxBarSize={26} />
                                   </BarChart>
                                 </ResponsiveContainer>
                               </div>
@@ -3389,7 +3394,7 @@ export default function BurnLabApp() {
                     <div className="flex items-start gap-3">
                       <div className="rounded-2xl p-1.5 shrink-0" style={{ background: C.card2, border: "1px solid " + C.line }}><Picto ex={detail} size={72} /></div>
                       <div>
-                        <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, lineHeight: 1, textTransform: "uppercase", color: C.text }}>{detail.name}</div>
+                        <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 24, lineHeight: 1.02, letterSpacing: "-0.02em", color: C.text }}>{detail.name}</div>
                         <div className="flex gap-1.5 mt-2 flex-wrap">
                           <Chip color={MUSCLES[detail.muscle]}>{detail.muscle.toUpperCase()}</Chip>
                           {detail.secondary.map(s => <Chip key={s} color={MUSCLES[s]}>{s.toUpperCase()}</Chip>)}
@@ -3454,7 +3459,7 @@ export default function BurnLabApp() {
 
                   {addStage === "search" && (<>
                     <div className="flex items-center justify-between mb-3">
-                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 24, textTransform: "uppercase", color: C.text }}>ADD TO {(MEAL_SLOTS.find(m => m[0] === addFor) || ["", ""])[1].toUpperCase()}</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>Add to {(MEAL_SLOTS.find(m => m[0] === addFor) || ["", ""])[1]}</div>
                       <button onClick={closeAdd} className="p-2 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Close"><X size={15} color={C.dim} /></button>
                     </div>
                     <div className="flex gap-2 mb-3">
@@ -3725,7 +3730,7 @@ export default function BurnLabApp() {
               <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000cc" }}>
                 <div className="w-full rounded-3xl p-6 text-center bl-fade overflow-y-auto" style={{ maxWidth: 400, maxHeight: "88vh", background: C.card2, color: C.text, border: "1px solid " + C.line }}>
                   <div style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: 3 }}>WORKOUT SAVED</div>
-                  <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 38, textTransform: "uppercase", lineHeight: 0.95, color: C.text }}>{summary.entry.dayName} DONE</div>
+                  <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 34, letterSpacing: "-0.02em", lineHeight: 1, color: C.text }}>{summary.entry.dayName} done</div>
                   <div className="grid grid-cols-3 gap-3 mt-5">
                     {[["DURATION", summary.entry.durationMin, "min"], ["SETS", summary.setCount, "logged"], ["TONNAGE", fmtNum(Math.round(summary.tonnage)), "kg"]].map((s, i) => (
                       <div key={i} className="rounded-xl py-3" style={{ background: C.card, border: "1px solid " + C.line }}>
@@ -3795,7 +3800,7 @@ export default function BurnLabApp() {
                   <div className="w-full bl-fade" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, background: C.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, border: "1px solid " + C.line, boxShadow: SHADOW.hero, padding: SPACE[5], paddingBottom: "calc(env(safe-area-inset-bottom) + " + SPACE[5] + "px)" }}>
                     <div className="mx-auto mb-4 rounded-full" style={{ width: 40, height: 4, background: C.line }} />
                     <div className="flex items-center justify-between mb-4">
-                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, letterSpacing: 0.5, textTransform: "uppercase", color: C.text }}>Quick Actions</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 24, letterSpacing: "-0.02em", color: C.text }}>Quick actions</div>
                       <button onClick={() => setFabOpen(false)} aria-label="Close" className="p-2 rounded-full" style={{ background: C.card2, border: "1px solid " + C.line }}><X size={16} color={C.dim} /></button>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -3910,9 +3915,18 @@ function SettingsPanel({ data, save, A, troph, onClose, onRedo, confirmReset, se
       <div className="w-full flex flex-col" style={{ maxWidth: 480, background: C.bg }}>
         <div className="flex items-center gap-3 px-5 pb-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
           <button onClick={onClose} aria-label="Back" className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }}><ChevronLeft size={16} color={C.dim} /></button>
-          <span style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24 }}>SETTINGS</span>
+          <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 24, letterSpacing: "-0.02em", color: C.text }}>Settings</span>
         </div>
         <div className="flex-1 px-5 overflow-y-auto" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 30px)" }}>
+
+          <div className="grid grid-cols-3 gap-2.5 mb-5">
+            {[["Workouts", (data.history || []).length], ["Weigh-ins", (data.weights || []).length], ["Trophies", troph.filter(t => t.done).length]].map(([l, v], i) => (
+              <div key={l} className="liquid-glass rounded-2xl py-3.5 text-center">
+                <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>{v}</div>
+                <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: 1, color: C.faint, marginTop: 3 }}>{l.toUpperCase()}</div>
+              </div>
+            ))}
+          </div>
 
           <SectionLabel>ATHLETE PROFILE</SectionLabel>
           <div className="liquid-glass rounded-3xl p-4 mb-5">
