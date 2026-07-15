@@ -1442,7 +1442,7 @@ function Onboarding({ A, onDone }) {
 }
 
 /* ================= MAIN APP ================= */
-const DEFAULTS = { program: null, history: [], profile: null, weights: [], foodLog: [], customFoods: [], settings: { accent: "ember", autoRest: true, plates: true, weeklyTarget: 15, sound: true, vibrate: true, restOverride: null, photoCadence: "weekly" }, subs: {} };
+const DEFAULTS = { program: null, history: [], profile: null, weights: [], foodLog: [], customFoods: [], water: {}, settings: { accent: "ember", autoRest: true, plates: true, weeklyTarget: 15, sound: true, vibrate: true, restOverride: null, photoCadence: "weekly", waterTarget: 2000 }, subs: {} };
 const PER_WEEK = { ppl: 4, ul: 4, fb: 3 };
 
 /* ---- timer finish alerts ---- */
@@ -1743,6 +1743,12 @@ export default function BurnLabApp() {
   const dayEntries = foodLog.filter(e => e.d === fuelDate);
   const dayTotals = dayEntries.reduce((a, e) => ({ kcal: a.kcal + e.kcal, p: a.p + e.p, c: a.c + e.c, f: a.f + e.f }), { kcal: 0, p: 0, c: 0, f: 0 });
   const eatenToday = foodLog.filter(e => e.d === dayKey(new Date())).reduce((a, e) => a + e.kcal, 0);
+  /* ---------- water tracker (additive: data.water keyed by dayKey -> ml) ---------- */
+  const water = data.water || {};
+  const waterTarget = (data.settings && data.settings.waterTarget) || 2000;
+  const waterToday = water[dayKey(new Date())] || 0;
+  const waterOn = (dk) => water[dk] || 0;
+  const addWater = (ml) => { const dk = dayKey(new Date()); const next = Math.max(0, (water[dk] || 0) + ml); save({ ...data, water: { ...water, [dk]: next } }); if (data.settings.vibrate) haptic(ml > 0 ? "light" : "tap"); };
   const recentFoods = useMemo(() => {
     const seen = new Map();
     for (let i = foodLog.length - 1; i >= 0 && seen.size < 12; i--) {
@@ -2199,206 +2205,134 @@ export default function BurnLabApp() {
             <main className="flex-1 px-6 overflow-y-auto" style={{ paddingBottom: 150 }}>
 
               {/* ================= HOME ================= */}
-              {tab === "home" && (
+              {tab === "home" && (() => {
+                const goalSessions = PER_WEEK[data.program] || 3;
+                const pct = goalSessions ? Math.min(100, Math.round((workoutsThisWeek / goalSessions) * 100)) : 0;
+                const trainedSet = new Set(data.history.map(h => new Date(h.date).toDateString()));
+                // per-day sets this week (Mon..Sun) for the mini bar chart
+                const monday = new Date(); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+                const perDaySets = Array.from({ length: 7 }, (_, i) => {
+                  const d = new Date(monday); d.setDate(monday.getDate() + i);
+                  return data.history.filter(h => new Date(h.date).toDateString() === d.toDateString())
+                    .reduce((a, h) => a + h.exercises.reduce((x, e) => x + e.sets.length, 0), 0);
+                });
+                const weekSets = perDaySets.reduce((a, b) => a + b, 0);
+                const waterWeek = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return waterOn(dayKey(d)); });
+                const weightSpark = weights.slice(-8).map(w => w.kg);
+                const wkStreak = weekStreak(data.history);
+                return (
                 <div className="bl-fade">
-                  {/* greeting — on the black canvas, light ink, ultra-heavy Anton */}
-                  <div className="mb-5">
-                    <div style={{ fontFamily: F.mono, fontSize: 10, color: C.onBgFaint, letterSpacing: 3 }}>GOOD {greet} · {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
-                    <div style={{ fontFamily: F.disp, fontSize: 48, lineHeight: 0.9, letterSpacing: "0.01em", textTransform: "uppercase", marginTop: 6, color: C.onBg }}>{firstName || "Athlete"}</div>
+                  {/* greeting */}
+                  <div className="mb-6">
+                    <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 14, color: C.dim }}>Keep moving today</div>
+                    <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 30, letterSpacing: "-0.02em", marginTop: 2, color: C.text }}>Hi, {firstName || "there"}</div>
                   </div>
 
-                  {/* bento dashboard — white cards on black: tiny title, micro bar, one huge number, OF-X */}
-                  {(() => {
-                    const goalSessions = PER_WEEK[data.program] || 3;
-                    const pct = goalSessions ? Math.min(1, workoutsThisWeek / goalSessions) : 0;
-                    const inWeek = h => new Date(h.date).getTime() > Date.now() - 7 * 864e5;
-                    const weekTonnage = Math.round(data.history.filter(inWeek).reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.reduce((x, s) => x + s.w * s.r, 0), 0), 0));
-                    const weekSets = data.history.filter(inWeek).reduce((t, h) => t + h.exercises.reduce((a, e) => a + e.sets.length, 0), 0);
-                    const hasT = data.profile && data.profile.targets;
-                    const kcalGoal = hasT ? data.profile.targets.goal : null;
-                    const kcalLeft = hasT ? Math.max(0, kcalGoal - eatenToday) : null;
-                    const cards = [
-                      { key: "burn", title: "WEEKLY BURN", value: workoutsThisWeek, of: "OF " + goalSessions + " SESSIONS", pct },
-                      { key: "sets", title: "SETS THIS WK", value: weekSets, of: weekAgg.setsT ? "OF " + weekAgg.setsT + " TARGET" : "LOGGED", pct: weekAgg.setsT ? Math.min(1, weekAgg.sets / weekAgg.setsT) : null },
-                      { key: "tonnage", title: "TONNAGE", value: weekTonnage, suffix: "kg", of: "THIS WEEK", pct: null },
-                      hasT
-                        ? { key: "fuel", title: "KCAL LEFT", value: kcalLeft, of: "OF " + fmtNum(kcalGoal), pct: Math.min(1, eatenToday / kcalGoal), go: () => setTab("fuel") }
-                        : { key: "fuel", title: "NUTRITION", value: "—", of: "SET UP IN FUEL", pct: null, go: () => setTab("fuel") },
-                      { key: "tro", title: "TROPHIES", value: troph.filter(t => t.done).length, of: "OF " + troph.length + " UNLOCKED", pct: troph.length ? troph.filter(t => t.done).length / troph.length : 0, go: () => setTab("trophies") },
-                      { key: "hist", title: "HISTORY", value: data.history.length, of: "WORKOUTS LOGGED", pct: null, go: () => setTab("progress") },
-                    ];
-                    return (
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        {cards.map((c, i) => {
-                          const Tag = c.go ? "button" : "div";
-                          return (
-                            <Tag key={c.key} onClick={c.go ? () => { if (data.settings.vibrate) haptic("tap"); c.go(); } : undefined}
-                              className={"liquid-glass bl-stagger rounded-3xl p-4 text-left " + (c.go ? "bl-spring active:scale-[0.97]" : "")}
-                              style={{ "--i": i }}>
-                              <div className="flex items-center justify-between mb-2" style={{ minHeight: 14 }}>
-                                <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 2 }}>{c.title}</span>
-                                {c.go && <ArrowUpRight size={13} color={C.faint} />}
-                              </div>
-                              {c.pct != null && (
-                                <div className="h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: C.card2 }}>
-                                  <div className="h-full rounded-full" style={{ width: Math.round(c.pct * 100) + "%", background: C.text }} />
-                                </div>
-                              )}
-                              <HeroNumber value={c.value} suffix={c.suffix} size={44} />
-                              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1, marginTop: 5 }}>{c.of}</div>
-                            </Tag>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
+                  {/* date strip */}
+                  <DateStrip trained={trainedSet} onToday={() => {}} />
 
-                  {/* week strip — white card, trained days filled orange */}
-                  {(() => {
-                    const monday = new Date(); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-                    const trained = new Set(data.history.map(h => new Date(h.date).toDateString()));
-                    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
-                    return (
-                      <div className="liquid-glass rounded-3xl p-3 mb-3">
-                        <div className="grid grid-cols-7 gap-1.5">
-                          {days.map((d, i) => {
-                            const isToday = d.toDateString() === new Date().toDateString();
-                            const did = trained.has(d.toDateString());
-                            return (
-                              <div key={i} className="rounded-2xl py-2 text-center"
-                                style={did
-                                  ? { background: AGV, border: "1px solid transparent", boxShadow: "0 6px 16px -8px " + A.a + "aa" }
-                                  : { background: C.card2, border: "1px solid " + (isToday ? A.a : "transparent") }}>
-                                <div style={{ fontFamily: F.mono, fontSize: 8.5, letterSpacing: 1, color: did ? "#fff" : C.faint }}>{"MTWTFSS"[i]}</div>
-                                <div style={{ fontFamily: F.disp, fontSize: 17, lineHeight: 1.1, color: did ? "#fff" : isToday ? C.text : C.dim }}>{d.getDate()}</div>
-                                {did ? <Check size={10} color="#fff" className="mx-auto" strokeWidth={3} /> : <div style={{ height: 10 }} />}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  {/* hero ring — weekly burn */}
+                  <div className="liquid-glass rounded-[28px] p-6 mb-4 flex flex-col items-center">
+                    <HeroArc value={pct} max={100} size={200} unit="%" label="Weekly burn" sublabel={workoutsThisWeek + " of " + goalSessions + " sessions"} accent={A} />
+                  </div>
 
-                  {/* photo reminder — white card */}
-                  {photoIsDue && data.settings.photoCadence !== "off" && (
-                    <button onClick={() => fileRef.current && fileRef.current.click()} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
-                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 38, height: 38, background: A.a + "1A" }}><Camera size={18} color={A.a} /></span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm" style={{ color: C.text }}>{photos.length ? "Progress photo due" : "Take your first progress photo"}</div>
-                        <div className="text-xs" style={{ color: C.dim }}>Same spot, same light, same pose - future you will thank you.</div>
-                      </div>
-                      <span className="text-xs font-bold px-3 py-1.5 rounded-full shrink-0" style={{ background: AG, color: "#0D0E11" }}>Snap</span>
-                    </button>
-                  )}
+                  {/* 2-col metric cards */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <MetricCard i={0} icon={Dumbbell} label="Sets" value={weekSets} denom={weekAgg.setsT || undefined} tint={A.a}
+                      chart={<MiniBars data={perDaySets} color={A.a} />} onClick={() => setTab("progress")} />
+                    <MetricCard i={1} icon={Weight} label="Water" value={waterToday} denom={waterTarget} unit="ml" tint={C.vizMint}
+                      chart={<MiniSpark data={waterWeek.some(v => v) ? waterWeek : null} color={C.vizMint} />} onClick={() => setTab("fuel")} />
+                    <MetricCard i={2} icon={TrendingUp} label="Weight" value={latestWeight || 0} decimals={latestWeight && latestWeight % 1 ? 1 : 0} unit="kg" tint={C.vizMint}
+                      chart={<MiniSpark data={weightSpark.length >= 2 ? weightSpark : null} color={C.vizMint} />} onClick={() => setTab("progress")} />
+                    <MetricCard i={3} icon={Flame} label="Streak" value={wkStreak} unit={wkStreak === 1 ? "week" : "weeks"} tint={A.a} onClick={() => setTab("progress")} />
+                  </div>
 
-                  {/* weigh-in prompt — white card */}
-                  {!weighedToday && data.profile && (
-                    <button onClick={() => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); }} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
-                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 38, height: 38, background: A.a + "1A" }}><Weight size={18} color={A.a} /></span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm" style={{ color: C.text }}>Log today's weigh-in</div>
-                        <div className="text-xs" style={{ color: C.dim }}>{weighStreak(weights) > 0 ? weighStreak(weights) + "-day streak going - keep it alive" : "Morning, post-bathroom, before food = most consistent"}</div>
-                      </div>
-                      <span className="text-xs font-bold px-3 py-1.5 rounded-full shrink-0" style={{ background: AG, color: "#0D0E11" }}>Log</span>
-                    </button>
-                  )}
-
-                  {/* next session — the one clear action, prominent white card, orange Start button */}
+                  {/* up next */}
                   {program ? (
-                    <div className="liquid-glass rounded-3xl p-6 mb-3">
-                      <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 3 }}>UP NEXT</div>
-                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 44, lineHeight: 0.92, letterSpacing: "0.01em", textTransform: "uppercase", marginTop: 6, color: C.text }}>{program.days[nextDayIdx].name}</div>
-                      <div className="text-sm mt-2" style={{ color: C.dim }}>{program.days[nextDayIdx].items.length} exercises · {program.days[nextDayIdx].items.reduce((a, i) => a + i.sets, 0)} working sets</div>
-                      {session ? (
-                        <button onClick={() => setTab("train")} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm" style={{ background: C.card2, border: "1px solid " + A.a, color: A.a }}>
-                          <Play size={15} /> Resume in progress
+                    <div className="liquid-glass rounded-[28px] p-5 mb-4">
+                      <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.dim }}>Up next</div>
+                      <div className="flex items-center justify-between gap-3 mt-1">
+                        <div className="min-w-0">
+                          <div className="truncate" style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 24, letterSpacing: "-0.02em", color: C.text }}>{program.days[nextDayIdx].name}</div>
+                          <div className="text-sm mt-0.5" style={{ color: C.dim }}>{program.days[nextDayIdx].items.length} exercises · {program.days[nextDayIdx].items.reduce((a, i) => a + i.sets, 0)} sets</div>
+                        </div>
+                        <button onClick={() => session ? setTab("train") : startSession(data.program, program.days[nextDayIdx])} aria-label={session ? "Resume workout" : "Start workout"}
+                          className="bl-spring active:scale-90 shrink-0 flex items-center justify-center rounded-full" style={{ width: 52, height: 52, background: A.a }}>
+                          <Play size={22} color="#0A0A0B" fill="#0A0A0B" />
                         </button>
-                      ) : (
-                        <GradBtn A={A} onClick={() => startSession(data.program, program.days[nextDayIdx])} className="mt-4 w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-base" style={{ boxShadow: "0 10px 32px -6px " + A.a + "88" }}>
-                          <Play size={18} fill="#0D0E11" /> Start Workout
-                        </GradBtn>
-                      )}
+                      </div>
+                      {session
+                        ? <button onClick={() => setTab("train")} className="mt-4 w-full flex items-center justify-center gap-2 rounded-full font-semibold text-sm" style={{ height: 52, background: C.card2, color: A.a }}><Play size={15} /> Resume in progress</button>
+                        : <GradBtn A={A} onClick={() => startSession(data.program, program.days[nextDayIdx])} className="mt-4 w-full flex items-center justify-center gap-2 rounded-full" style={{ height: 56, fontSize: 16 }}><Play size={18} fill="#0A0A0B" /> Start workout</GradBtn>}
                     </div>
                   ) : (
-                    <div className="liquid-glass rounded-3xl p-5 mb-3">
-                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 30, textTransform: "uppercase", color: C.text }}>PICK YOUR SPLIT</div>
+                    <div className="liquid-glass rounded-[28px] p-5 mb-4">
+                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>Pick your split</div>
                       <p className="text-sm mt-1" style={{ color: C.dim }}>Choose a training program to unlock your first session.</p>
-                      <GradBtn A={A} onClick={() => setTab("train")} className="mt-4 px-5 py-2.5 rounded-full text-sm">Choose a program</GradBtn>
+                      <GradBtn A={A} onClick={() => setTab("train")} className="mt-4 px-5 rounded-full text-sm" style={{ height: 48 }}>Choose a program</GradBtn>
                     </div>
                   )}
 
-                  {/* muscle-map banner — opens the flagship full-screen body diagram */}
+                  {/* trophy teaser */}
+                  <button onClick={() => setTab("trophies")} className="liquid-glass bl-spring active:scale-[0.98] w-full text-left rounded-3xl p-4 mb-4 flex items-center gap-3">
+                    <span className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: C.yellow + "22" }}><Trophy size={19} color={C.yellow} /></span>
+                    <div className="flex-1 min-w-0">
+                      <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>Trophies</div>
+                      <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: C.card2 }}>
+                        <div className="h-full rounded-full" style={{ width: Math.round((troph.filter(t => t.done).length / troph.length) * 100) + "%", background: A.a }} />
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 18, color: C.text }}>{troph.filter(t => t.done).length}<span style={{ color: C.faint }}>/{troph.length}</span></span>
+                  </button>
+
+                  {/* muscle map entry */}
                   {(() => {
                     const hot = Object.entries(heatMap).filter(([, v]) => v.ratio > 1.1).length;
                     const dormant = Object.entries(heatMap).filter(([, v]) => v.daysSince === Infinity || v.daysSince > 10).length;
                     return (
-                      <button onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab("muscles"); }}
-                        className="liquid-glass bl-spring active:scale-[0.98] w-full text-left mb-3 rounded-3xl p-5">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>MUSCLE MAP</div>
-                            <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 28, textTransform: "uppercase", lineHeight: 0.95, color: C.text, marginTop: 3 }}>What's fired up</div>
-                            <div className="text-xs mt-1.5" style={{ color: C.dim }}>{hot} firing hot · {dormant} dormant · tap to inspect</div>
-                          </div>
-                          <div className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 44, height: 44, background: A.a + "14" }}><ArrowUpRight size={20} color={A.a} /></div>
+                      <button onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab("muscles"); }} className="liquid-glass bl-spring active:scale-[0.98] w-full text-left mb-4 rounded-3xl p-5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 20, letterSpacing: "-0.02em", color: C.text }}>What's fired up</div>
+                          <div className="text-sm mt-1" style={{ color: C.dim }}>{hot} firing hot · {dormant} dormant · tap to inspect</div>
                         </div>
+                        <ChevronRight size={22} color={C.faint} className="shrink-0" />
                       </button>
                     );
                   })()}
 
-                  {/* weekly targets trio - Apple Activity-style concentric rings */}
-                  <SectionLabel>THIS WEEK VS TARGET</SectionLabel>
-                  <div className="liquid-glass rounded-3xl px-3 py-5 mb-3">
-                    <ActivityRings rings={[
-                      { label: "Sets", color: A.a, value: weekAgg.sets, target: weekAgg.setsT },
-                      { label: "Muscles", color: C.blue, value: weekAgg.muscles, target: weekAgg.musclesT },
-                      { label: "Exercises", color: "#71717A", value: weekAgg.exs, target: weekAgg.exsT },
-                    ]} />
-                  </div>
+                  {/* quiet prompts */}
+                  {!weighedToday && data.profile && (
+                    <button onClick={() => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); }} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
+                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 40, height: 40, background: A.a + "1A" }}><Weight size={18} color={A.a} /></span>
+                      <div className="flex-1 min-w-0">
+                        <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>Log today's weigh-in</div>
+                        <div className="text-xs mt-0.5" style={{ color: C.dim }}>{weighStreak(weights) > 0 ? weighStreak(weights) + "-day streak going — keep it alive" : "Same time each day is most consistent"}</div>
+                      </div>
+                      <span className="text-xs font-semibold px-3 py-2 rounded-full shrink-0" style={{ background: A.a, color: "#0A0A0B" }}>Log</span>
+                    </button>
+                  )}
+                  {photoIsDue && data.settings.photoCadence !== "off" && (
+                    <button onClick={() => fileRef.current && fileRef.current.click()} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
+                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 40, height: 40, background: A.a + "1A" }}><Camera size={18} color={A.a} /></span>
+                      <div className="flex-1 min-w-0">
+                        <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>{photos.length ? "Progress photo due" : "Take your first progress photo"}</div>
+                        <div className="text-xs mt-0.5" style={{ color: C.dim }}>Same spot, same light, same pose.</div>
+                      </div>
+                      <span className="text-xs font-semibold px-3 py-2 rounded-full shrink-0" style={{ background: A.a, color: "#0A0A0B" }}>Snap</span>
+                    </button>
+                  )}
 
-                  {/* muscle grid: top-3 "in focus" by default, full Upper/Lower grouping on Show All */}
-                  {(() => {
-                    const rows = Object.keys(MUSCLES).map(m => ({
-                      m, value: Math.round(week[m] || 0), target: muscleTarget(m),
-                      pct: (week[m] || 0) / muscleTarget(m), focus: focusMuscles.includes(m),
-                    }));
-                    const top3 = [...rows].sort((a, b) => b.pct - a.pct).slice(0, 3);
-                    return (
-                      <>
-                        <SectionLabel>{showAllMuscles ? "MUSCLES THIS WEEK" : "TOP 3 IN FOCUS"}</SectionLabel>
-                        <div className="liquid-glass rounded-3xl px-4 py-1 mb-3">
-                          {!showAllMuscles ? (
-                            top3.map(r => <MuscleBar key={r.m} label={r.m} color={MUSCLES[r.m]} value={r.value} target={r.target} focus={r.focus} />)
-                          ) : (
-                            Object.entries(MUSCLE_GROUPS).map(([group, muscles]) => (
-                              <div key={group}>
-                                <div className="pt-3 pb-1" style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5 }}>{group.toUpperCase()}</div>
-                                {muscles.map(m => {
-                                  const r = rows.find(x => x.m === m);
-                                  return <MuscleBar key={m} label={m} color={MUSCLES[m]} value={r.value} target={r.target} focus={r.focus} />;
-                                })}
-                              </div>
-                            ))
-                          )}
-                          <button onClick={() => setShowAllMuscles(v => !v)} className="w-full text-center py-2.5 text-xs font-bold mt-1" style={{ color: A.a, borderTop: "1px solid " + C.line }}>
-                            {showAllMuscles ? "Show less" : "Show all " + Object.keys(MUSCLES).length}
-                          </button>
-                        </div>
-                      </>
-                    );
-                  })()}
-
-                  {/* lab note — white card with an orange accent rail */}
-                  <div className="liquid-glass rounded-3xl p-4 mb-2 flex gap-3" style={{ borderLeft: "3px solid " + A.a }}>
+                  {/* lab note */}
+                  <div className="liquid-glass rounded-3xl p-4 mb-2 flex gap-3">
                     <Info size={18} color={A.a} className="shrink-0 mt-0.5" />
                     <div>
-                      <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 1.5 }}>LAB NOTE</div>
+                      <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim, letterSpacing: 1.5 }}>LAB NOTE</div>
                       <p className="text-sm mt-1" style={{ color: C.text }}>{scienceTip}</p>
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* ================= MUSCLE MAP (flagship) ================= */}
               {tab === "muscles" && (
