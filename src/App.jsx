@@ -6,7 +6,7 @@ import {
 import {
   Home, Dumbbell, Utensils, Trophy, TrendingUp, BookOpen, Settings,
   Play, Check, X, Plus, Info, Search, Award, Flame, Timer, Camera, ArrowUpRight, Weight, ScanLine,
-  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Trash2, Lock, Repeat, HelpCircle, Zap, CalendarDays,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Trash2, Lock, Repeat, HelpCircle, Zap, CalendarDays, Minus,
 } from "lucide-react";
 import { BurnLabLogo } from "./components/ui/BurnLabLogo";
 
@@ -2631,7 +2631,7 @@ export default function BurnLabApp() {
                   {!data.profile || data.profile.skipped || !data.profile.targets ? (
                     <div className="liquid-glass rounded-3xl p-6 text-center">
                       <Utensils size={26} color={C.faint} className="mx-auto mb-2" />
-                      <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 24, textTransform: "uppercase", color: C.text }}>SET UP YOUR FUEL</div>
+                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>Set up your fuel</div>
                       <p className="text-sm mt-1 mb-4" style={{ color: C.dim }}>Answer a two-minute questionnaire and BurnLab calculates your calories, macros and meal plan.</p>
                       <GradBtn A={A} onClick={() => save({ ...data, profile: null })} className="px-5 py-2.5 rounded-full text-sm">Start questionnaire</GradBtn>
                     </div>
@@ -2681,7 +2681,7 @@ export default function BurnLabApp() {
                         <div className="liquid-glass flex items-center justify-between rounded-2xl px-2 py-2 mb-3">
                           <button onClick={() => shiftFuelDate(-1)} className="p-2 rounded-xl" style={{ background: C.card2 }} aria-label="Previous day"><ChevronLeft size={15} color={C.dim} /></button>
                           <div className="text-center">
-                            <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 20, lineHeight: 1, color: C.text }}>{fuelDate === dayKey(new Date()) ? "TODAY" : new Date(fuelDate + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).toUpperCase()}</div>
+                            <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 18, letterSpacing: "-0.02em", lineHeight: 1, color: C.text }}>{fuelDate === dayKey(new Date()) ? "Today" : new Date(fuelDate + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</div>
                             {fuelDate !== dayKey(new Date()) && <button onClick={() => setFuelDate(dayKey(new Date()))} className="text-xs" style={{ color: A.a }}>back to today</button>}
                           </div>
                           <button onClick={() => shiftFuelDate(1)} disabled={fuelDate >= dayKey(new Date())} className="p-2 rounded-xl" style={{ background: C.card2, opacity: fuelDate >= dayKey(new Date()) ? 0.35 : 1 }} aria-label="Next day"><ChevronLeft size={15} color={C.dim} style={{ transform: "rotate(180deg)" }} /></button>
@@ -2716,6 +2716,32 @@ export default function BurnLabApp() {
                             ))}
                           </div>
                         </div>
+
+                        {/* water — only for today; real logging, no fake steps */}
+                        {fuelDate === dayKey(new Date()) && (() => {
+                          const wpct = Math.min(100, Math.round((waterToday / waterTarget) * 100));
+                          const cups = 8, filled = Math.round((waterToday / waterTarget) * cups);
+                          return (
+                            <div className="liquid-glass rounded-3xl p-5 mb-3">
+                              <div className="flex items-end justify-between gap-3 mb-3">
+                                <div className="min-w-0">
+                                  <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>WATER</div>
+                                  <HeroNumber value={waterToday} suffix="ml" denom={waterTarget} size={38} color={C.vizMint} />
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button onClick={() => addWater(-250)} disabled={waterToday <= 0} aria-label="Remove 250ml" className="bl-spring active:scale-90 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: C.card2, opacity: waterToday <= 0 ? 0.4 : 1 }}><Minus size={17} color={C.dim} /></button>
+                                  <button onClick={() => addWater(250)} aria-label="Add 250ml" className="bl-spring active:scale-90 flex items-center justify-center rounded-full" style={{ width: 48, height: 48, background: C.vizMint }}><Plus size={20} color="#0A0A0B" strokeWidth={2.6} /></button>
+                                </div>
+                              </div>
+                              <div className="flex gap-1.5">
+                                {Array.from({ length: cups }, (_, i) => (
+                                  <div key={i} className="flex-1 rounded-full" style={{ height: 6, background: i < filled ? C.vizMint : C.card2 }} />
+                                ))}
+                              </div>
+                              <div className="mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1 }}>{wpct}% of {(waterTarget / 1000).toFixed(waterTarget % 1000 ? 1 : 0)}L · +250ml a tap</div>
+                            </div>
+                          );
+                        })()}
 
                         {/* meals */}
                         {MEAL_SLOTS.map(([slot, label]) => {
