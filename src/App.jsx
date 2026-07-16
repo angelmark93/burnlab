@@ -2322,7 +2322,7 @@ export default function BurnLabApp() {
               {/* ================= TRAIN: PICKER ================= */}
               {tab === "train" && !session && (
                 <div className="bl-fade">
-                  <ScreenHead eyebrow="Your program" title="Train" />
+                  <ScreenHead title="Train" />
                   <div className="grid grid-cols-3 gap-2.5 mb-6">
                     {Object.entries(PROGRAMS).map(([k, pr]) => {
                       const on = data.program === k;
@@ -2395,23 +2395,24 @@ export default function BurnLabApp() {
                     return (
                       <div className="mb-4">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>● LIVE SESSION</div>
-                            <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", lineHeight: 1.1, color: C.text }}>{session.dayName}</div>
+                          <div className="min-w-0">
+                            <div className="truncate" style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", lineHeight: 1.1, color: C.text }}>{session.dayName}</div>
                           </div>
                           {discardArm ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                               <button onClick={() => { setSession(null); clearRest(); setDiscardArm(false); }} className="text-xs font-bold px-3 py-2 rounded-lg" style={{ background: C.red, color: "#fff" }}>Discard</button>
-                              <button onClick={() => setDiscardArm(false)} className="text-xs px-3 py-2 rounded-lg" style={{ background: C.card, color: C.dim, border: "1px solid " + C.line }}>Keep</button>
+                              <button onClick={() => setDiscardArm(false)} className="text-xs px-3 py-2 rounded-lg" style={{ background: C.card, color: C.dim }}>Keep</button>
                             </div>
                           ) : (
-                            <button onClick={() => setDiscardArm(true)} className="p-2 rounded-lg" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Discard session"><X size={16} color={C.dim} /></button>
+                            <button onClick={() => setDiscardArm(true)} className="p-2 rounded-lg shrink-0" style={{ background: C.card }} aria-label="Discard session"><X size={16} color={C.dim} /></button>
                           )}
                         </div>
-                        <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
-                          <div className="h-full rounded-full transition-all" style={{ width: (totalSets ? (doneSets / totalSets) * 100 : 0) + "%", background: AG }} />
+                        <div className="mt-3 flex items-center gap-3">
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+                            <div className="h-full rounded-full transition-all" style={{ width: (totalSets ? (doneSets / totalSets) * 100 : 0) + "%", background: AG }} />
+                          </div>
+                          <span className="shrink-0" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{doneSets}/{totalSets}</span>
                         </div>
-                        <div className="mt-1" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{doneSets} / {totalSets} SETS</div>
                       </div>
                     );
                   })()}
@@ -2456,7 +2457,7 @@ export default function BurnLabApp() {
                           <div className="p-5">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>EXERCISE {cur + 1} / {session.items.length}{it.focus ? " · 🎯 FOCUS" : ""}</div>
+                                {it.focus && <div style={{ fontFamily: F.mono, fontSize: 10, color: A.a, letterSpacing: 2 }}>🎯 FOCUS</div>}
                                 <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 26, lineHeight: 1.02, letterSpacing: "-0.02em", color: C.text }}>{ex.name}</div>
                                 <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim, marginTop: 2 }}>{it.sets} × {it.lo}-{it.hi} @ RPE {it.rpe} · rest {Math.round(it.rest / 60)}m</div>
                               </div>
@@ -2559,7 +2560,7 @@ export default function BurnLabApp() {
               {/* ================= FUEL ================= */}
               {tab === "fuel" && (
                 <div className="bl-fade">
-                  <ScreenHead eyebrow="Today's intake" title="Fuel" />
+                  <ScreenHead title="Fuel" />
                   {!data.profile || data.profile.skipped || !data.profile.targets ? (
                     <div className="liquid-glass rounded-3xl p-6 text-center">
                       <Utensils size={26} color={C.faint} className="mx-auto mb-2" />
@@ -2735,7 +2736,7 @@ export default function BurnLabApp() {
                       <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 26, letterSpacing: "-0.02em", color: C.text }}>{({ bodyweight: "Bodyweight", strength: "Strength", volume: "Volume", records: "Records", photos: "Photos", habits: "Habits", history: "History" })[progressView]}</div>
                     </div>
                   ) : (
-                    <ScreenHead eyebrow="Your trajectory" title="Progress" />
+                    <ScreenHead title="Progress" />
                   )}
 
                   {!progressView && (() => {
