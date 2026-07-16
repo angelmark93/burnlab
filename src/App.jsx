@@ -2292,6 +2292,10 @@ export default function BurnLabApp() {
                 const goalSessions = PER_WEEK[data.program] || 3;
                 const pct = goalSessions ? Math.min(100, Math.round((workoutsThisWeek / goalSessions) * 100)) : 0;
                 const dayName = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+                const streak = weekStreak(data.history);
+                const total = data.history.length;
+                const recent = total ? data.history[total - 1] : null;
+                const stats = [["This week", workoutsThisWeek, "of " + goalSessions], ["Streak", streak, streak === 1 ? "week" : "weeks"], ["Workouts", total, "total"]];
                 return (
                 <div>
                   {/* greeting */}
@@ -2329,6 +2333,27 @@ export default function BurnLabApp() {
                       <p className="text-sm mt-1" style={{ color: C.dim }}>Choose a program to unlock your first session.</p>
                       <GradBtn A={A} onClick={() => setTab("train")} className="mt-4 px-5 rounded-full text-sm" style={{ height: 48 }}>Choose a program</GradBtn>
                     </div>
+                  )}
+
+                  {/* insights */}
+                  <div className="reveal-3 grid grid-cols-3 gap-2.5 mt-5">
+                    {stats.map(([l, v, s]) => (
+                      <div key={l} className="liquid-glass rounded-2xl px-2 py-3.5 text-center">
+                        <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>{v}<span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, fontWeight: 400 }}> {s.startsWith("of") ? s : ""}</span></div>
+                        <div className="mt-0.5" style={{ fontFamily: F.body, fontSize: 11, color: C.dim }}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {recent && (
+                    <button onClick={() => { setTab("progress"); setProgressView("history"); }} className="reveal-3 liquid-glass bl-spring active:scale-[0.98] w-full text-left rounded-2xl px-4 py-3 mt-2.5 flex items-center gap-3">
+                      <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 38, height: 38, background: A.a + "1A" }}><Dumbbell size={17} color={A.a} /></span>
+                      <div className="flex-1 min-w-0">
+                        <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 14, color: C.text }}>Last workout</div>
+                        <div className="text-xs truncate" style={{ color: C.dim }}>{recent.dayName} · {dayLabel(recent.date)} · {recent.exercises.reduce((a, e) => a + e.sets.length, 0)} sets</div>
+                      </div>
+                      <ChevronRight size={18} color={C.faint} className="shrink-0" />
+                    </button>
                   )}
                 </div>
                 );
