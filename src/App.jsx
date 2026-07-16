@@ -1630,6 +1630,7 @@ export default function BurnLabApp() {
   const [customF, setCustomF] = useState({ n: "", k: "", p: "", c: "", f: "", sg: "" });
   const [entryEdit, setEntryEdit] = useState(null);   // entry object being edited
   const [showIdeas, setShowIdeas] = useState(false);
+  const [macroOpen, setMacroOpen] = useState(false);
   const importRef = useRef(null);
   const [importMsg, setImportMsg] = useState("");
   const [offResults, setOffResults] = useState([]);
@@ -2569,133 +2570,78 @@ export default function BurnLabApp() {
                   ) : (() => {
                     const t = data.profile.targets;
                     const mp = MEALS[GOAL_MEAL[data.profile.goal] || "maintain"];
-                    const tot = mp.meals.reduce((a, m) => ({ kcal: a.kcal + m.kcal, p: a.p + m.p }), { kcal: 0, p: 0 });
+                    const eaten = Math.round(dayTotals.kcal);
+                    const remaining = Math.max(0, t.goal - eaten);
+                    const over = eaten > t.goal;
+                    const isToday = fuelDate === dayKey(new Date());
+                    const macros = [["Protein", dayTotals.p, t.proteinG], ["Carbs", dayTotals.c, t.carbG], ["Fat", dayTotals.f, t.fatG]];
                     return (
                       <>
-                        <div className="liquid-glass rounded-3xl p-5 mb-3 text-center" style={{ borderTop: "2px solid " + A.a }}>
-                          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>DAILY TARGET · {(GOAL_LABEL[data.profile.goal] || "").toUpperCase()}</div>
-                          <div className="flex justify-center my-1"><HeroNumber value={t.goal} size={58} /></div>
-                          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>kcal / day · maintenance {fmtNum(t.maintain)} kcal</div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2.5 mb-4">
-                          {[["PROTEIN", t.proteinG + "g", "#F0603A"], ["FAT", t.fatG + "g", "#F2B928"], ["CARBS", t.carbG + "g", "#3D9BFF"]].map((m, i) => (
-                            <div key={i} className="liquid-glass bl-spring relative overflow-hidden rounded-2xl py-4 text-center active:scale-[0.97]">
-                              <div style={{ fontFamily: F.disp, fontSize: 24, color: C.text, lineHeight: 1.06, letterSpacing: -0.5 }}>{m[1]}</div>
-                              <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 2, marginTop: 5 }}>{m[0]}</div>
-                              {/* ultra-subtle macro-coded under-glow on the bottom edge */}
-                              <div className="absolute left-0 right-0 bottom-0 pointer-events-none" style={{ height: 22, background: "radial-gradient(60% 100% at 50% 130%," + m[2] + "55, transparent)" }} aria-hidden="true" />
-                            </div>
-                          ))}
+                        {/* date */}
+                        <div className="flex items-center justify-between mb-4">
+                          <button onClick={() => shiftFuelDate(-1)} className="p-2 rounded-full" style={{ background: C.card }} aria-label="Previous day"><ChevronLeft size={16} color={C.dim} /></button>
+                          <button onClick={() => isToday ? null : setFuelDate(dayKey(new Date()))} style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.02em", color: isToday ? C.text : A.a }}>{isToday ? "Today" : new Date(fuelDate + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</button>
+                          <button onClick={() => shiftFuelDate(1)} disabled={fuelDate >= dayKey(new Date())} className="p-2 rounded-full" style={{ background: C.card, opacity: fuelDate >= dayKey(new Date()) ? 0.35 : 1 }} aria-label="Next day"><ChevronRight size={16} color={C.dim} /></button>
                         </div>
 
-                        {(() => {
-                          const b = bmiOf(data.profile.weightKg, data.profile.heightCm);
-                          const band = bmiBand(b);
-                          return b ? (
-                            <div className="liquid-glass rounded-3xl px-4 py-3 mb-3 flex items-center justify-between">
-                              <div>
-                                <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 1.5 }}>BODY MASS INDEX</div>
-                                <div className="text-xs mt-0.5" style={{ color: C.dim }}>A blunt tool - it can't tell muscle from fat, so lifters often read "high".</div>
-                              </div>
-                              <div className="text-right shrink-0 pl-3">
-                                <div style={{ fontFamily: F.disp, fontWeight: 400, fontSize: 26, lineHeight: 1, color: C.text }}>{b}</div>
-                                <div style={{ fontFamily: F.mono, fontSize: 9, color: band.color }}>{band.label.toUpperCase()}</div>
-                              </div>
-                            </div>
-                          ) : null;
-                        })()}
-
-                        {/* ---------- FOOD DIARY ---------- */}
-                        <div className="flex items-center justify-between mb-3">
-                          <SectionLabel>FOOD DIARY</SectionLabel>
-                        </div>
-                        <div className="liquid-glass flex items-center justify-between rounded-2xl px-2 py-2 mb-3">
-                          <button onClick={() => shiftFuelDate(-1)} className="p-2 rounded-xl" style={{ background: C.card2 }} aria-label="Previous day"><ChevronLeft size={15} color={C.dim} /></button>
-                          <div className="text-center">
-                            <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 18, letterSpacing: "-0.02em", lineHeight: 1, color: C.text }}>{fuelDate === dayKey(new Date()) ? "Today" : new Date(fuelDate + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</div>
-                            {fuelDate !== dayKey(new Date()) && <button onClick={() => setFuelDate(dayKey(new Date()))} className="text-xs" style={{ color: A.a }}>back to today</button>}
+                        {/* the one hero — calories remaining */}
+                        <div className="liquid-glass rounded-[28px] p-6 mb-3 text-center">
+                          <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 2 }}>{over ? "OVER BY" : "REMAINING"}</div>
+                          <div className="flex justify-center my-1"><HeroNumber value={over ? eaten - t.goal : remaining} suffix="kcal" size={56} accent={over ? undefined : A} color={over ? C.red : undefined} /></div>
+                          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{fmtNum(eaten)} of {fmtNum(t.goal)} kcal</div>
+                          <div className="mt-4 h-2 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+                            <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (eaten / t.goal) * 100) + "%", background: over ? C.red : AG }} />
                           </div>
-                          <button onClick={() => shiftFuelDate(1)} disabled={fuelDate >= dayKey(new Date())} className="p-2 rounded-xl" style={{ background: C.card2, opacity: fuelDate >= dayKey(new Date()) ? 0.35 : 1 }} aria-label="Next day"><ChevronLeft size={15} color={C.dim} style={{ transform: "rotate(180deg)" }} /></button>
-                        </div>
-
-                        {/* day summary */}
-                        <div className="liquid-glass rounded-3xl p-5 mb-3">
-                          <div className="flex items-end justify-between gap-3">
-                            <div className="min-w-0">
-                              <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>EATEN</div>
-                              <HeroNumber value={Math.round(dayTotals.kcal)} suffix="kcal" size={38} />
-                            </div>
-                            <div className="text-right min-w-0">
-                              <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>REMAINING</div>
-                              <HeroNumber value={Math.max(0, t.goal - Math.round(dayTotals.kcal))} suffix="kcal" size={38} />
-                            </div>
-                          </div>
-                          <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
-                            <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (dayTotals.kcal / t.goal) * 100) + "%", background: AG, boxShadow: "0 0 10px " + A.a + "aa" }} />
-                          </div>
-                          <div className="grid grid-cols-3 gap-3 mt-4">
-                            {[["PROTEIN", dayTotals.p, t.proteinG], ["CARBS", dayTotals.c, t.carbG], ["FAT", dayTotals.f, t.fatG]].map(([l, v, tg]) => (
-                              <div key={l}>
-                                <div className="flex items-baseline justify-between">
-                                  <span style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>{l}</span>
-                                  <span style={{ fontFamily: F.mono, fontSize: 10, color: C.text, fontVariantNumeric: "tabular-nums" }}>{Math.round(v)}<span style={{ color: C.faint }}>/{tg}g</span></span>
-                                </div>
-                                <div className="mt-1.5 h-1.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
-                                  <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (v / tg) * 100) + "%", background: A.a }} />
-                                </div>
-                              </div>
+                          {/* macros — one quiet line, detail on tap */}
+                          <button onClick={() => setMacroOpen(o => !o)} className="w-full flex items-center justify-center gap-3 mt-4" aria-expanded={macroOpen}>
+                            {macros.map(([l, v, tg]) => (
+                              <span key={l} style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{l[0]} <span style={{ color: C.text }}>{Math.round(v)}</span><span style={{ color: C.faint }}>/{tg}</span></span>
                             ))}
-                          </div>
+                            {macroOpen ? <ChevronUp size={13} color={C.faint} /> : <ChevronDown size={13} color={C.faint} />}
+                          </button>
+                          {macroOpen && (
+                            <div className="grid grid-cols-3 gap-3 mt-3 bl-fade">
+                              {macros.map(([l, v, tg]) => (
+                                <div key={l}>
+                                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+                                    <div className="bl-spring h-full rounded-full" style={{ width: Math.min(100, (v / tg) * 100) + "%", background: A.a }} />
+                                  </div>
+                                  <div className="mt-1" style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1 }}>{l.toUpperCase()}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
-                        {/* water — only for today; real logging, no fake steps */}
-                        {fuelDate === dayKey(new Date()) && (() => {
-                          const wpct = Math.min(100, Math.round((waterToday / waterTarget) * 100));
-                          const cups = 8, filled = Math.round((waterToday / waterTarget) * cups);
-                          return (
-                            <div className="liquid-glass rounded-3xl p-5 mb-3">
-                              <div className="flex items-end justify-between gap-3 mb-3">
-                                <div className="min-w-0">
-                                  <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint, letterSpacing: 2 }}>WATER</div>
-                                  <HeroNumber value={waterToday} suffix="ml" denom={waterTarget} size={38} color={C.vizMint} />
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <button onClick={() => addWater(-250)} disabled={waterToday <= 0} aria-label="Remove 250ml" className="bl-spring active:scale-90 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: C.card2, opacity: waterToday <= 0 ? 0.4 : 1 }}><Minus size={17} color={C.dim} /></button>
-                                  <button onClick={() => addWater(250)} aria-label="Add 250ml" className="bl-spring active:scale-90 flex items-center justify-center rounded-full" style={{ width: 48, height: 48, background: C.vizMint }}><Plus size={20} color="#0A0A0B" strokeWidth={2.6} /></button>
-                                </div>
-                              </div>
-                              <div className="flex gap-1.5">
-                                {Array.from({ length: cups }, (_, i) => (
-                                  <div key={i} className="flex-1 rounded-full" style={{ height: 6, background: i < filled ? C.vizMint : C.card2 }} />
-                                ))}
-                              </div>
-                              <div className="mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 1 }}>{wpct}% of {(waterTarget / 1000).toFixed(waterTarget % 1000 ? 1 : 0)}L · +250ml a tap</div>
-                            </div>
-                          );
-                        })()}
+                        {/* water — a small tappable chip, today only */}
+                        {isToday && (
+                          <button onClick={() => addWater(250)} className="bl-spring active:scale-[0.98] w-full flex items-center gap-3 rounded-2xl px-4 py-3 mb-3" style={{ background: C.card }}>
+                            <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 34, height: 34, background: C.vizMint + "1F" }}>💧</span>
+                            <div className="flex-1 text-left" style={{ fontFamily: F.mono, fontSize: 13, color: C.text }}>{fmtNum(waterToday).replace(/,/g, " ")}<span style={{ color: C.faint }}> / {fmtNum(waterTarget).replace(/,/g, " ")} ml</span></div>
+                            {waterToday > 0 && <span role="button" tabIndex={0} onClick={e => { e.stopPropagation(); addWater(-250); }} className="flex items-center justify-center rounded-full" style={{ width: 30, height: 30, background: C.card2 }}><Minus size={15} color={C.dim} /></span>}
+                            <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 34, height: 34, background: C.vizMint }}><Plus size={17} color="#0A0A0B" strokeWidth={2.6} /></span>
+                          </button>
+                        )}
 
-                        {/* meals */}
+                        {/* meals — minimal rows */}
                         {MEAL_SLOTS.map(([slot, label]) => {
                           const items = dayEntries.filter(e => e.meal === slot);
                           const kc = items.reduce((a, e) => a + e.kcal, 0);
                           return (
-                            <div key={slot} className="liquid-glass rounded-3xl mb-2.5 overflow-hidden">
+                            <div key={slot} className="liquid-glass rounded-2xl mb-2 overflow-hidden">
                               <div className="flex items-center justify-between px-4 py-3">
-                                <div>
-                                  <span className="font-bold text-sm" style={{ color: C.text }}>{label}</span>
-                                  {kc > 0 && <span className="ml-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}>{fmtNum(Math.round(kc))} kcal</span>}
+                                <span className="font-semibold text-sm" style={{ color: C.text }}>{label}</span>
+                                <div className="flex items-center gap-3">
+                                  {kc > 0 && <span style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{fmtNum(Math.round(kc))} kcal</span>}
+                                  <button onClick={() => { setAddFor(slot); setAddStage("search"); }} aria-label={"Add food to " + label} className="w-7 h-7 rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ background: A.a }}><Plus size={15} color="#0A0A0B" strokeWidth={2.8} /></button>
                                 </div>
-                                <button onClick={() => { setAddFor(slot); setAddStage("search"); }} aria-label={"Add food to " + label} className="w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ background: AG }}><Plus size={16} color="#0A0A0B" strokeWidth={2.6} /></button>
                               </div>
                               {items.length > 0 && (
-                                <div className="px-4 pb-2" style={{ borderTop: "1px solid " + C.line }}>
+                                <div className="px-4 pb-1" style={{ borderTop: "1px solid " + C.line }}>
                                   {items.map(e2 => (
-                                    <button key={e2.id} onClick={() => setEntryEdit(e2)} className="w-full flex items-center justify-between py-2 text-left transition-transform active:scale-[0.98]" style={{ borderBottom: "1px solid " + C.line + "88" }}>
-                                      <div className="min-w-0">
-                                        <div className="text-sm truncate" style={{ color: C.text }}>{e2.name}</div>
-                                        <div style={{ fontFamily: F.mono, fontSize: 9.5, color: C.faint }}>{e2.g ? e2.g + "g · " : ""}P{Math.round(e2.p)} C{Math.round(e2.c)} F{Math.round(e2.f)}</div>
-                                      </div>
-                                      <span className="shrink-0 pl-2" style={{ fontFamily: F.mono, fontSize: 12, color: C.text }}>{fmtNum(e2.kcal)}</span>
+                                    <button key={e2.id} onClick={() => setEntryEdit(e2)} className="w-full flex items-center justify-between py-2 text-left transition-transform active:scale-[0.98]">
+                                      <span className="text-sm truncate min-w-0 pr-2" style={{ color: C.dim }}>{e2.name}</span>
+                                      <span className="shrink-0" style={{ fontFamily: F.mono, fontSize: 12, color: C.text }}>{fmtNum(e2.kcal)}</span>
                                     </button>
                                   ))}
                                 </div>
@@ -2703,11 +2649,10 @@ export default function BurnLabApp() {
                             </div>
                           );
                         })}
-                        <p className="text-xs mt-1 mb-4" style={{ color: C.faint }}>Built-in foods use typical values; worldwide search is powered by Open Food Facts (community data - double-check odd-looking numbers against the label). Logging works fully offline; anything you've logged stays searchable in Recents without signal.</p>
 
                         {/* meal ideas (collapsible) */}
-                        <button onClick={() => setShowIdeas(!showIdeas)} className="liquid-glass w-full flex items-center justify-between rounded-3xl px-4 py-3 mb-3">
-                          <span className="font-bold text-sm" style={{ color: C.text }}>Meal ideas · {mp.label}</span>
+                        <button onClick={() => setShowIdeas(!showIdeas)} className="liquid-glass w-full flex items-center justify-between rounded-2xl px-4 py-3 mb-3 mt-3">
+                          <span className="font-semibold text-sm" style={{ color: C.text }}>Meal ideas · {mp.label}</span>
                           {showIdeas ? <ChevronUp size={16} color={C.dim} /> : <ChevronDown size={16} color={C.dim} />}
                         </button>
                         {showIdeas && (
