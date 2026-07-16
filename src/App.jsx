@@ -914,6 +914,45 @@ const SectionLabel = ({ children }) => (
 );
 /* ScreenHead — Noir screen title: sentence-case Plus Jakarta semibold, with a small grey kicker
    above and an optional right-aligned figure. Calm, not shouting. */
+/* TrophyCard — portrait achievement card. Artwork tries /trophies/{id}.png and falls back to the
+   tier-icon treatment so the app ships complete before any art exists. Lazy-loaded, size-capped. */
+function TrophyCard({ t, A, i, sheen = false }) {
+  const [imgOk, setImgOk] = useState(true);
+  const tier = TIER[t.tier];
+  const pct = Math.min(100, (t.v / t.tg) * 100);
+  return (
+    <div className={"bl-stagger relative rounded-2xl overflow-hidden " + (t.done ? "bl-ring bl-ring-static " : "") + (sheen ? "bl-sheen " : "")}
+      style={{ "--i": i, background: C.card, boxShadow: t.done ? "0 12px 26px -14px " + tier + "66" : "none" }}>
+      <div className="relative" style={{ aspectRatio: "1 / 1", background: C.card2 }}>
+        <img src={"/trophies/" + t.id + ".png"} alt="" loading="lazy" onError={() => setImgOk(false)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", maxWidth: 600, display: imgOk ? "block" : "none", filter: t.done ? "none" : "grayscale(1)", opacity: t.done ? 1 : 0.2 }} />
+        {!imgOk && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="rounded-full flex items-center justify-center" style={{ width: 64, height: 64, background: t.done ? tier + "22" : C.card2, border: "2px solid " + (t.done ? tier : C.line), opacity: t.done ? 1 : 0.4 }}>
+              {t.done ? <Trophy size={28} color={tier} /> : <Lock size={22} color={C.faint} />}
+            </div>
+          </div>
+        )}
+        <span className="absolute" style={{ top: 8, left: 8, fontFamily: F.mono, fontSize: 8, letterSpacing: 1, padding: "3px 7px", borderRadius: 999, background: "rgba(0,0,0,0.55)", color: t.done ? tier : C.faint, textTransform: "uppercase" }}>{t.tier}</span>
+        {t.done && <span className="absolute flex items-center justify-center rounded-full" style={{ top: 8, right: 8, width: 22, height: 22, background: "rgba(0,0,0,0.55)" }}><Check size={14} color={tier} /></span>}
+      </div>
+      <div className="p-3">
+        <div className="truncate" style={{ fontFamily: F.body, fontWeight: 700, fontSize: 14, color: t.done ? C.text : C.dim }}>{t.name}</div>
+        {t.done ? (
+          <div className="text-xs mt-0.5 truncate" style={{ color: C.faint }}>{t.desc}</div>
+        ) : (
+          <>
+            <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: C.card2 }}>
+              <div className="h-full rounded-full" style={{ width: pct + "%", background: A.a }} />
+            </div>
+            <div className="mt-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: C.text }}>{fmtNum(Math.min(t.v, t.tg))}<span style={{ color: C.faint }}> / {fmtNum(t.tg)}</span></div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* CubeMark — the BurnLab identity: an isometric 3D cube, B on the left face, L on the right.
    Pure CSS 3D. `spin` plays the splash rotate-in + light-catch; otherwise it sits settled. */
 function CubeMark({ size = 40, spin = false }) {
@@ -2724,33 +2763,18 @@ export default function BurnLabApp() {
                       );
                     })}
                   </div>
-                  {["platinum", "gold", "silver", "bronze"].map(tier => (
-                    <div key={tier}>
-                      {troph.some(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat)) && <SectionLabel>{tier.toUpperCase()}</SectionLabel>}
-                      {troph.filter(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat)).map((t, i) => (
-                        <div key={t.id} className="rounded-xl px-4 py-3 mb-2 flex items-center gap-3 bl-stagger-slide" style={{ background: C.card, border: "1px solid " + (t.done ? TIER[t.tier] + "66" : C.line), opacity: t.done ? 1 : 0.75, boxShadow: t.done ? "0 6px 20px -8px " + TIER[t.tier] + "77" : "none", "--i": i }}>
-                          <div className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 42, height: 42, background: t.done ? TIER[t.tier] + "22" : C.card2, border: "2px solid " + (t.done ? TIER[t.tier] : C.line) }}>
-                            {t.done ? <Trophy size={18} color={TIER[t.tier]} /> : <Lock size={15} color={C.faint} />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-sm" style={{ color: t.done ? C.text : C.dim }}>{t.name}</span>
-                              {t.done && <Check size={14} color={TIER[t.tier]} />}
-                            </div>
-                            <div className="text-xs" style={{ color: C.faint }}>{t.desc}</div>
-                            {!t.done && (
-                              <div className="mt-1.5 flex items-center gap-2">
-                                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: C.card2 }}>
-                                  <div className="h-full rounded-full" style={{ width: Math.min(100, (t.v / t.tg) * 100) + "%", background: TIER[t.tier] }} />
-                                </div>
-                                <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint }}>{fmtNum(Math.min(t.v, t.tg))}/{fmtNum(t.tg)}</span>
-                              </div>
-                            )}
-                          </div>
+                  {["platinum", "gold", "silver", "bronze"].map(tier => {
+                    const list = troph.filter(t => t.tier === tier && (trophyCat === "All" || t.category === trophyCat));
+                    if (!list.length) return null;
+                    return (
+                      <div key={tier}>
+                        <SectionLabel>{tier.toUpperCase()}</SectionLabel>
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          {list.map((t, i) => <TrophyCard key={t.id} t={t} A={A} i={i} />)}
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -3703,15 +3727,11 @@ export default function BurnLabApp() {
                     </div>
                   )}
                   {summary.trophies && summary.trophies.length > 0 && (
-                    <div className="mt-4 rounded-xl p-3" style={{ background: TIER.gold + "14", border: "1px solid " + TIER.gold + "55" }}>
-                      <div className="flex items-center justify-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: TIER.gold, letterSpacing: 2 }}><Trophy size={13} /> TROPHY UNLOCKED</div>
-                      {summary.trophies.map(t => (
-                        <div key={t.id} className="flex items-center justify-center gap-2 mt-2">
-                          <Trophy size={15} color={TIER[t.tier]} />
-                          <span className="text-sm font-bold">{t.name}</span>
-                          <span className="text-xs" style={{ color: C.faint }}>{t.tier.toUpperCase()}</span>
-                        </div>
-                      ))}
+                    <div className="mt-5">
+                      <div className="flex items-center justify-center gap-1.5 mb-3" style={{ fontFamily: F.mono, fontSize: 10, color: TIER.gold, letterSpacing: 2 }}><Trophy size={13} /> {summary.trophies.length > 1 ? "TROPHIES UNLOCKED" : "TROPHY UNLOCKED"}</div>
+                      <div className={"grid gap-3 " + (summary.trophies.length === 1 ? "grid-cols-1 px-12" : "grid-cols-2")}>
+                        {summary.trophies.map((t, i) => <TrophyCard key={t.id} t={{ ...t, done: true }} A={A} i={i} sheen />)}
+                      </div>
                     </div>
                   )}
                   <GradBtn A={A} onClick={() => { setSummary(null); setTab("home"); }} className="w-full mt-5 rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Done</GradBtn>
@@ -3722,18 +3742,12 @@ export default function BurnLabApp() {
             {/* ======= TROPHY UNLOCK TOAST (outside a workout — food/weigh-in/photo) ======= */}
             {trophyToast && trophyToast.length > 0 && (
               <div className="fixed inset-0 z-40 flex items-center justify-center px-6" style={{ background: "#000000cc" }} onClick={() => setTrophyToast(null)}>
-                <div className="w-full rounded-3xl p-6 text-center bl-fade" style={{ maxWidth: 360, background: C.card2, border: "1px solid " + TIER.gold + "55" }} onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center justify-center gap-1.5" style={{ fontFamily: F.mono, fontSize: 10, color: TIER.gold, letterSpacing: 3 }}><Trophy size={13} /> {trophyToast.length > 1 ? "TROPHIES UNLOCKED" : "TROPHY UNLOCKED"}</div>
-                  <div className="mt-3 rounded-xl p-3" style={{ background: TIER.gold + "14", border: "1px solid " + TIER.gold + "55" }}>
-                    {trophyToast.map(t => (
-                      <div key={t.id} className="flex items-center justify-center gap-2 py-1.5">
-                        <Trophy size={16} color={TIER[t.tier]} />
-                        <span className="text-sm font-bold">{t.name}</span>
-                        <span className="text-xs" style={{ color: C.faint }}>{t.tier.toUpperCase()}</span>
-                      </div>
-                    ))}
+                <div className="w-full rounded-3xl p-6 text-center bl-fade" style={{ maxWidth: 360, background: C.card2 }} onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-center gap-1.5 mb-3" style={{ fontFamily: F.mono, fontSize: 10, color: TIER.gold, letterSpacing: 3 }}><Trophy size={13} /> {trophyToast.length > 1 ? "TROPHIES UNLOCKED" : "TROPHY UNLOCKED"}</div>
+                  <div className={"grid gap-3 " + (trophyToast.length === 1 ? "grid-cols-1 px-10" : "grid-cols-2")}>
+                    {trophyToast.map((t, i) => <TrophyCard key={t.id} t={{ ...t, done: true }} A={A} i={i} sheen />)}
                   </div>
-                  <GradBtn A={A} onClick={() => setTrophyToast(null)} className="w-full mt-4 rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Nice</GradBtn>
+                  <GradBtn A={A} onClick={() => setTrophyToast(null)} className="w-full mt-5 rounded-full" style={{ height: 56, fontFamily: F.disp, fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>Nice</GradBtn>
                 </div>
               </div>
             )}
