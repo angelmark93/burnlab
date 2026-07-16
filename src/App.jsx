@@ -914,6 +914,22 @@ const SectionLabel = ({ children }) => (
 );
 /* ScreenHead — Noir screen title: sentence-case Plus Jakarta semibold, with a small grey kicker
    above and an optional right-aligned figure. Calm, not shouting. */
+/* CubeMark — the BurnLab identity: an isometric 3D cube, B on the left face, L on the right.
+   Pure CSS 3D. `spin` plays the splash rotate-in + light-catch; otherwise it sits settled. */
+function CubeMark({ size = 40, spin = false }) {
+  const half = size / 2;
+  const gs = Math.round(size * 0.62);
+  return (
+    <div className="cube-scene" style={{ width: size, height: size }}>
+      <div className={"cube" + (spin ? " cube-spin" : "")} style={{ width: size, height: size, "--half": half + "px" }}>
+        <div className="face f-top" />
+        <div className="face f-left"><span className="glyph" style={{ fontSize: gs }}>B</span></div>
+        <div className="face f-right"><span className="glyph" style={{ fontSize: gs }}>L</span></div>
+      </div>
+    </div>
+  );
+}
+
 const ScreenHead = ({ eyebrow, title, right }) => (
   <div className="flex items-end justify-between mb-5 mt-1">
     <div className="min-w-0">
@@ -2202,15 +2218,10 @@ export default function BurnLabApp() {
         {/* ======= SPLASH ======= */}
         {splash && (
           <div className={"fixed inset-0 z-50 flex flex-col items-center justify-center " + (splash === "out" ? "bl-gone" : "")} style={{ background: C.bg }}>
-            <div className="bl-splash-in" style={{ marginBottom: 22 }}>
-              <svg width="76" height="76" viewBox="0 0 512 512" aria-hidden="true">
-                <defs><linearGradient id="splashG" x1="0" y1="1" x2="0.6" y2="0"><stop offset="0" stopColor="#C4EE3A" /><stop offset="1" stopColor="#E9FBA0" /></linearGradient></defs>
-                <path d="M256 88 C 210 160, 150 208, 150 296 A 106 106 0 0 0 362 296 C 362 232, 322 190, 300 148 C 292 190, 276 204, 256 216 C 268 172, 264 128, 256 88 Z" fill="url(#splashG)" />
-                <path d="M256 260 C 232 292, 212 312, 212 344 A 44 44 0 0 0 300 344 C 300 316, 278 296, 256 260 Z" fill={C.bg} />
-                <path d="M256 300 C 244 316, 236 326, 236 342 A 20 20 0 0 0 276 342 C 276 328, 266 318, 256 300 Z" fill="url(#splashG)" opacity="0.9" />
-              </svg>
+            <div style={{ marginBottom: 30 }}>
+              <CubeMark size={96} spin />
             </div>
-            <div className="bl-splash-in" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 34, letterSpacing: 3, color: C.text }}>
+            <div className="bl-splash-sub" style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 30, letterSpacing: 2, color: C.text }}>
               BURN<span className="bl-shimmer" style={{ backgroundImage: SHIMMER }}>LAB</span>
             </div>
             <div className="bl-splash-sub" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: 4, marginTop: 10 }}>TRAIN · FUEL · PROGRESS</div>
@@ -2223,7 +2234,10 @@ export default function BurnLabApp() {
           <>
             {/* ======= HEADER — minimal, chrome pared back; the screen title carries identity ======= */}
             <header className="flex items-center justify-between px-6 pb-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
-              <BurnLabLogo className="h-7" />
+              <div className="flex items-center gap-2.5 select-none">
+                <CubeMark size={26} />
+                <span style={{ fontFamily: F.brand, fontWeight: 800, fontSize: 17, letterSpacing: "-0.01em", textTransform: "uppercase" }}><span style={{ color: C.text }}>Burn</span><span style={{ color: C.faint }}>Lab</span></span>
+              </div>
               <div className="flex items-center gap-2.5">
                 <button onClick={() => setOverlay("library")} aria-label="Exercise library" className="transition-transform active:scale-90"><BookOpen size={19} color={C.faint} /></button>
                 <button onClick={() => setOverlay("settings")} aria-label="Your profile" className="rounded-full flex items-center justify-center transition-transform active:scale-90" style={{ width: 30, height: 30, background: "transparent", border: "1.5px solid " + A.a, fontFamily: F.brand, fontWeight: 800, fontSize: 12, color: A.a }}>
