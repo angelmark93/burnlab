@@ -340,6 +340,34 @@ function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size
   );
 }
 
+/* Compact non-interactive muscle figure — highlights the set of muscles worked
+   this session in the accent colour. Front + back rendered as a small pair for
+   the workout-runner header ("muscle mini-figures" from the Log-your-sets ref). */
+function MiniBody({ fem, worked, accent, size = 46 }) {
+  return (
+    <div className="flex items-end gap-1">
+      {["front", "back"].map(view => (
+        <svg key={view} width={size} height={Math.round(size * ANAT_H / ANAT_W)} viewBox={"0 0 " + ANAT_W + " " + ANAT_H} aria-hidden="true">
+          <BodySilhouette fem={fem} />
+          {MUSCLE_REGIONS[view].map((r, i) => {
+            const on = r.m !== "Forearms" && worked && worked.has(r.m);
+            return <path key={i} d={blobPath(r.pts)} fill={on ? accent : "#2B303B"} fillOpacity={on ? 0.95 : 0.55} />;
+          })}
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/* Live mm:ss counter since `from` (epoch ms) — self-ticking, isolated re-render. */
+function Elapsed({ from }) {
+  const [, tick] = useState(0);
+  useEffect(() => { const id = setInterval(() => tick(t => t + 1), 1000); return () => clearInterval(id); }, []);
+  const s = Math.max(0, Math.floor((Date.now() - from) / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  return <>{h ? h + ":" + String(m).padStart(2, "0") : m}:{String(ss).padStart(2, "0")}</>;
+}
+
 /* ================= EXERCISE LIBRARY ================= */
 const EXERCISES = [
   // ---- PUSH ----
@@ -2484,6 +2512,24 @@ export default function BurnLabApp() {
                   {(() => {
                     const totalSets = session.entries.reduce((a, arr) => a + arr.filter(s => !s.warmup).length, 0);
                     const doneSets = session.entries.reduce((a, arr) => a + arr.filter(s => !s.warmup && s.done).length, 0);
+                    // live session volume (done working sets only, warm-ups excluded) + worked-muscle set
+                    let volume = 0;
+                    const worked = new Set();
+                    session.entries.forEach((arr, xi) => {
+                      const ex = EX[session.items[xi].ex]; if (!ex) return;
+                      let touched = false;
+                      arr.forEach(s => { if (s.done && !s.warmup) { volume += (parseFloat(s.w) || 0) * (parseInt(s.r) || 0); touched = true; } });
+                      if (touched) { worked.add(ex.muscle); (ex.secondary || []).forEach(m => worked.add(m)); }
+                    });
+                    const volLabel = volume >= 1000
+                      ? <>{(volume / 1000).toFixed(1).replace(/\.0$/, "")}<span style={{ fontSize: 11, color: C.faint }}> t</span></>
+                      : <>{Math.round(volume)}<span style={{ fontSize: 11, color: C.faint }}> kg</span></>;
+                    const stat = (label, val) => (
+                      <div className="flex-1 text-center">
+                        <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 19, lineHeight: 1, color: C.text, fontVariantNumeric: "tabular-nums" }}>{val}</div>
+                        <div style={{ fontFamily: F.mono, fontSize: 8.5, color: C.faint, letterSpacing: 1.5, marginTop: 3 }}>{label}</div>
+                      </div>
+                    );
                     return (
                       <div className="mb-4">
                         <div className="flex items-center justify-between">
@@ -2498,6 +2544,18 @@ export default function BurnLabApp() {
                           ) : (
                             <button onClick={() => setDiscardArm(true)} className="p-2 rounded-lg shrink-0" style={{ background: C.card }} aria-label="Discard session"><X size={16} color={C.dim} /></button>
                           )}
+                        </div>
+                        {/* time · volume · sets header + worked-muscle mini figures */}
+                        <div className="mt-3 flex items-center gap-3 rounded-2xl p-3" style={{ background: C.card, border: "1px solid " + C.line }}>
+                          <div className="flex-1 flex items-center">
+                            {stat("TIME", <Elapsed from={session.startedAt} />)}
+                            <div style={{ width: 1, height: 26, background: C.line }} />
+                            {stat("VOLUME", volLabel)}
+                            <div style={{ width: 1, height: 26, background: C.line }} />
+                            {stat("SETS", doneSets)}
+                          </div>
+                          <div style={{ width: 1, height: 40, background: C.line }} />
+                          <MiniBody fem={data.profile && data.profile.sex === "f"} worked={worked} accent={A.a} size={38} />
                         </div>
                         <div className="mt-3 flex items-center gap-3">
                           <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: C.card2 }}>
@@ -2520,6 +2578,14 @@ export default function BurnLabApp() {
                     const sug = suggest(data.history, it);
                     const prev = lastPerf(data.history, it.ex);
                     const heaviest = Math.max(0, ...working.map(s => parseFloat(s.w) || 0));
+                    // "Changes" — realized progression vs last time this exercise was trained (top e1RM)
+                    const doneWork = working.filter(s => s.done && parseFloat(s.w) > 0 && parseInt(s.r) > 0);
+                    let change = null;
+                    if (prev && prev.sets.length && doneWork.length) {
+                      const curTop = Math.max(...doneWork.map(s => e1rm(parseFloat(s.w), parseInt(s.r))));
+                      const prevTop = Math.max(...prev.sets.map(s => e1rm(s.w, s.r)));
+                      if (prevTop > 0) { const pct = (curTop - prevTop) / prevTop * 100; change = { pct, up: pct > 0.75, down: pct < -0.75 }; }
+                    }
                     const goPrev = () => { if (data.settings.vibrate) haptic("tap"); setOpenIdx(Math.max(0, cur - 1)); };
                     const goNext = () => { if (data.settings.vibrate) haptic("tap"); setOpenIdx(Math.min(session.items.length - 1, cur + 1)); };
                     /* Progressive Focus: the current set = first not-yet-logged set. Marking it done
@@ -2566,6 +2632,14 @@ export default function BurnLabApp() {
                                 <TrendingUp size={13} color={C.yellow} className="shrink-0" />
                                 <span style={{ fontFamily: F.mono, fontSize: 11, color: C.yellow }}>
                                   {sug.mode === "load" ? "Target: load up to " + fmtKg(sug.w) + " kg × " + sug.r : "Target: beat last time - " + fmtKg(sug.w) + " kg × " + sug.r}
+                                </span>
+                              </div>
+                            )}
+                            {change && (
+                              <div className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: (change.up ? C.green : change.down ? C.red : C.dim) + "12", border: "1px solid " + (change.up ? C.green : change.down ? C.red : C.dim) + "30" }}>
+                                {change.up ? <TrendingUp size={13} color={C.green} className="shrink-0" /> : change.down ? <TrendingUp size={13} color={C.red} className="shrink-0" style={{ transform: "scaleY(-1)" }} /> : <Minus size={13} color={C.dim} className="shrink-0" />}
+                                <span style={{ fontFamily: F.mono, fontSize: 11, color: change.up ? C.green : change.down ? C.red : C.dim }}>
+                                  Changes: {change.up ? "+" : ""}{change.pct.toFixed(1)}% est. 1RM {change.up ? "vs last — progressing" : change.down ? "vs last" : "— matched last time"}
                                 </span>
                               </div>
                             )}
