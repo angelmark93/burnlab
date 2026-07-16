@@ -7,6 +7,7 @@ import {
   Home, Dumbbell, Utensils, Trophy, TrendingUp, BookOpen, Settings,
   Play, Check, X, Plus, Info, Search, Award, Flame, Timer, Camera, ArrowUpRight, Weight, ScanLine,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Trash2, Lock, Repeat, HelpCircle, Zap, CalendarDays, Minus,
+  Columns, Share2, Eye, EyeOff,
 } from "lucide-react";
 import { BurnLabLogo } from "./components/ui/BurnLabLogo";
 
@@ -1702,6 +1703,12 @@ export default function BurnLabApp() {
   const [photos, setPhotos] = useState([]);
   const [photoView, setPhotoView] = useState(null); // index into photos
   const [photoErr, setPhotoErr] = useState("");
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [cmpA, setCmpA] = useState(null);      // photo id in slot A
+  const [cmpB, setCmpB] = useState(null);      // photo id in slot B
+  const [cmpActive, setCmpActive] = useState("A"); // which slot a thumb tap fills
+  const [cmpHideW, setCmpHideW] = useState(false);
+  const [cmpBusy, setCmpBusy] = useState(false);
   const fileRef = useRef(null);
   const [weighOpen, setWeighOpen] = useState(false);
   const [fuelDate, setFuelDate] = useState(dayKey(new Date()));
@@ -1806,6 +1813,72 @@ export default function BurnLabApp() {
   };
   const deletePhoto = (id) => { if (data.settings.vibrate) haptic("warning"); savePhotos(photos.filter(p => p.id !== id)); setPhotoView(null); };
   const photoIsDue = photoDue(photos, data.settings.photoCadence);
+  const openCompare = () => {
+    if (photos.length < 2) return;
+    setCmpA(photos[0].id);
+    setCmpB(photos[photos.length - 1].id);
+    setCmpActive("A"); setCmpHideW(false); setCompareOpen(true);
+    if (data.settings.vibrate) haptic("tap");
+  };
+  /* Render the two selected photos into one shareable image (cover-cropped to a
+     matched 4:5 frame each) with date/weight captions, then share or download. */
+  const exportCompare = async () => {
+    const A = photos.find(p => p.id === cmpA), B = photos.find(p => p.id === cmpB);
+    if (!A || !B || cmpBusy) return;
+    setCmpBusy(true);
+    try {
+      const load = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+      const [ia, ib] = await Promise.all([load(A.img), load(B.img)]);
+      const colW = 528, gap = 12, cw = colW * 2 + gap, imgH = Math.round(colW * 5 / 4);
+      const headerH = 118, capH = 132;
+      const canvas = document.createElement("canvas");
+      canvas.width = cw; canvas.height = headerH + imgH + capH;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#0A0A0B"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // cover-draw an image into a box
+      const cover = (im, x, y, w, h) => {
+        const s = Math.max(w / im.width, h / im.height), dw = im.width * s, dh = im.height * s;
+        ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+        ctx.drawImage(im, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); ctx.restore();
+      };
+      // header
+      ctx.fillStyle = "#D6F25F";
+      ctx.font = "800 34px 'Space Grotesk', sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText("BURNLAB", 40, headerH / 2 - 12);
+      ctx.fillStyle = "#9BA0A6"; ctx.font = "500 22px 'IBM Plex Mono', monospace";
+      const daysBetween = Math.abs(Math.round((new Date(B.date) - new Date(A.date)) / 864e5));
+      ctx.fillText("PROGRESS · " + daysBetween + " DAYS APART", 40, headerH / 2 + 26);
+      // images
+      cover(ia, 0, headerH, colW, imgH);
+      cover(ib, colW + gap, headerH, colW, imgH);
+      // captions
+      const cap = (p, x, tag) => {
+        const cy = headerH + imgH;
+        ctx.fillStyle = "#111113"; ctx.fillRect(x, cy, colW, capH);
+        ctx.fillStyle = tag === "BEFORE" ? "#9BA0A6" : "#D6F25F";
+        ctx.font = "700 20px 'IBM Plex Mono', monospace";
+        ctx.fillText(tag, x + 34, cy + 34);
+        ctx.fillStyle = "#F4F4F2"; ctx.font = "800 30px 'Space Grotesk', sans-serif";
+        ctx.fillText(new Date(p.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }), x + 34, cy + 74);
+        if (!cmpHideW && p.weightKg) { ctx.fillStyle = "#9BA0A6"; ctx.font = "500 24px 'IBM Plex Mono', monospace"; ctx.fillText(fmtKg(p.weightKg) + " kg", x + 34, cy + 108); }
+      };
+      const older = new Date(A.date) <= new Date(B.date);
+      cap(A, 0, older ? "BEFORE" : "AFTER");
+      cap(B, colW + gap, older ? "AFTER" : "BEFORE");
+      await new Promise(res => canvas.toBlob(async blob => {
+        if (!blob) { res(); return; }
+        const file = new File([blob], "burnlab-progress.png", { type: "image/png" });
+        try {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "My BurnLab progress" }); res(); return; }
+        } catch (e) { /* user cancelled or unsupported — fall through to download */ }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = url; a.download = "burnlab-progress.png"; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000); res();
+      }, "image/png"));
+    } catch (e) { setPhotoErr("Couldn't build the comparison image."); }
+    finally { setCmpBusy(false); }
+  };
 
   /* ---------- bodyweight ---------- */
   const weights = data.weights || [];
@@ -2264,12 +2337,17 @@ export default function BurnLabApp() {
           </div>
         )}
         {photos.length === 0 && <p className="text-sm mb-3" style={{ color: C.dim }}>Track the change the scales can't show. Photos are compressed and stored only on this device - same spot, same light, same pose works best.</p>}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <button onClick={() => fileRef.current && fileRef.current.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm" style={{ background: AG, color: "#0A0A0B" }}>
             <Camera size={15} /> Add photo
           </button>
-          <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{photos.length} STORED · {data.settings.photoCadence.toUpperCase()} REMINDERS</span>
+          {photos.length >= 2 && (
+            <button onClick={openCompare} className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm" style={{ background: C.card2, border: "1px solid " + C.line, color: C.text }}>
+              <Columns size={15} color={C.dim} /> Compare
+            </button>
+          )}
         </div>
+        <div className="mt-2" style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{photos.length} STORED · {data.settings.photoCadence.toUpperCase()} REMINDERS</div>
         {photoErr && <p className="text-xs mt-2" style={{ color: C.red }}>{photoErr}</p>}
       </div>
     </>
@@ -3617,6 +3695,65 @@ export default function BurnLabApp() {
                 </div>
               </div>
             )}
+
+            {/* ======= PHOTO COMPARE ======= */}
+            {compareOpen && (() => {
+              const pa = photos.find(p => p.id === cmpA), pb = photos.find(p => p.id === cmpB);
+              const older = pa && pb && new Date(pa.date) <= new Date(pb.date);
+              const slot = (p, key, tag) => {
+                const active = cmpActive === key;
+                return (
+                  <button onClick={() => setCmpActive(key)} className="flex-1 min-w-0 text-left rounded-2xl overflow-hidden relative"
+                    style={{ border: "2px solid " + (active ? A.a : C.line) }}>
+                    {p ? <img src={p.img} alt={tag} className="w-full object-cover" style={{ height: "42vh" }} />
+                       : <div className="w-full flex items-center justify-center" style={{ height: "42vh", background: C.card2, color: C.faint, fontSize: 13 }}>Pick a photo</div>}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded" style={{ background: "#0A0A0BCC", fontFamily: F.mono, fontSize: 9, letterSpacing: 1, color: tag === "BEFORE" ? C.dim : A.a }}>{tag}</span>
+                    {p && (
+                      <span className="absolute bottom-2 left-2 right-2 px-2 py-1 rounded" style={{ background: "#0A0A0BCC" }}>
+                        <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 13, color: C.text }}>{new Date(p.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        {!cmpHideW && p.weightKg ? <span style={{ fontFamily: F.mono, fontSize: 10, color: C.dim }}> · {fmtKg(p.weightKg)}kg</span> : null}
+                      </span>
+                    )}
+                  </button>
+                );
+              };
+              return (
+                <div className="fixed inset-0 z-40 flex flex-col px-5 pt-6 pb-5 overflow-y-auto" style={{ background: "#000000EE" }}>
+                  <div className="w-full mx-auto flex flex-col" style={{ maxWidth: 480 }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div style={{ fontFamily: F.disp, fontWeight: 800, fontSize: 24, letterSpacing: "-0.02em", color: C.text }}>Compare</div>
+                      <button onClick={() => setCompareOpen(false)} className="p-2 rounded-xl" style={{ background: C.card, border: "1px solid " + C.line }} aria-label="Close compare"><X size={16} color={C.dim} /></button>
+                    </div>
+                    <p className="text-xs mb-3" style={{ color: C.faint }}>Tap a frame to make it active, then pick a photo below.</p>
+                    <div className="flex gap-2 mb-3">
+                      {slot(pa, "A", older ? "BEFORE" : "AFTER")}
+                      {slot(pb, "B", older ? "AFTER" : "BEFORE")}
+                    </div>
+                    {/* thumbnail picker — fills the active slot */}
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3">
+                      {photos.map(p => {
+                        const sel = p.id === cmpA || p.id === cmpB;
+                        return (
+                          <button key={p.id} onClick={() => (cmpActive === "A" ? setCmpA(p.id) : setCmpB(p.id))}
+                            className="shrink-0 rounded-lg overflow-hidden relative" style={{ border: "2px solid " + (sel ? A.a : C.line) }} aria-label={"Use photo " + dayLabel(p.date)}>
+                            <img src={p.img} alt="" className="object-cover" style={{ width: 54, height: 68 }} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setCmpHideW(v => !v)} className="flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-bold" style={{ background: C.card, border: "1px solid " + C.line, color: cmpHideW ? C.faint : C.text }}>
+                        {cmpHideW ? <EyeOff size={15} color={C.faint} /> : <Eye size={15} color={C.dim} />} {cmpHideW ? "Weight hidden" : "Weight shown"}
+                      </button>
+                      <button onClick={exportCompare} disabled={cmpBusy || !pa || !pb} className="flex-1 flex items-center justify-center gap-2 rounded-2xl text-sm font-bold active:scale-[0.98]" style={{ height: 50, background: A.a, color: "#0A0A0B", opacity: cmpBusy ? 0.6 : 1 }}>
+                        <Share2 size={16} color="#0A0A0B" /> {cmpBusy ? "Preparing…" : "Export / share"}
+                      </button>
+                    </div>
+                    {photoErr && <p className="text-xs mt-2" style={{ color: C.red }}>{photoErr}</p>}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ======= ADD FOOD SHEET ======= */}
             {addFor !== null && (
