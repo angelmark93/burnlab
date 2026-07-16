@@ -1641,6 +1641,7 @@ export default function BurnLabApp() {
   const videoRef = useRef(null);
   const scanCtl = useRef(null);
   const [weighVal, setWeighVal] = useState("");
+  const [progressView, setProgressView] = useState(null); // null = index; else a detail key
   const [weightRange, setWeightRange] = useState("1M");
   const [progRange, setProgRange] = useState("1M");     // volume/sets analytics range
   const [progMetric, setProgMetric] = useState("sets"); // 'sets' | 'volume'
@@ -2223,48 +2224,23 @@ export default function BurnLabApp() {
               {tab === "home" && (() => {
                 const goalSessions = PER_WEEK[data.program] || 3;
                 const pct = goalSessions ? Math.min(100, Math.round((workoutsThisWeek / goalSessions) * 100)) : 0;
-                const trainedSet = new Set(data.history.map(h => new Date(h.date).toDateString()));
-                // per-day sets this week (Mon..Sun) for the mini bar chart
-                const monday = new Date(); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-                const perDaySets = Array.from({ length: 7 }, (_, i) => {
-                  const d = new Date(monday); d.setDate(monday.getDate() + i);
-                  return data.history.filter(h => new Date(h.date).toDateString() === d.toDateString())
-                    .reduce((a, h) => a + h.exercises.reduce((x, e) => x + e.sets.length, 0), 0);
-                });
-                const weekSets = perDaySets.reduce((a, b) => a + b, 0);
-                const waterWeek = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return waterOn(dayKey(d)); });
-                const weightSpark = weights.slice(-8).map(w => w.kg);
-                const wkStreak = weekStreak(data.history);
+                const dayName = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
                 return (
-                <div className="bl-fade">
+                <div>
                   {/* greeting */}
-                  <div className="mb-6">
-                    <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 14, color: C.dim }}>Keep moving today</div>
+                  <div className="reveal-1" style={{ marginBottom: 28 }}>
+                    <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.dim }}>{dayName}</div>
                     <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 30, letterSpacing: "-0.02em", marginTop: 2, color: C.text }}>Hi, {firstName || "there"}</div>
                   </div>
 
-                  {/* date strip */}
-                  <DateStrip trained={trainedSet} onToday={() => {}} />
-
-                  {/* hero ring — weekly burn */}
-                  <div className="liquid-glass rounded-[28px] p-6 mb-4 flex flex-col items-center">
-                    <HeroArc value={pct} max={100} size={200} unit="%" label="Weekly burn" sublabel={workoutsThisWeek + " of " + goalSessions + " sessions"} accent={A} />
+                  {/* the one hero — weekly ring */}
+                  <div className="reveal-2 liquid-glass rounded-[28px] p-6 mb-5 flex flex-col items-center">
+                    <HeroArc value={pct} max={100} size={216} unit="%" label="Weekly burn" sublabel={workoutsThisWeek + " of " + goalSessions + " sessions"} accent={A} />
                   </div>
 
-                  {/* 2-col metric cards */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <MetricCard i={0} icon={Dumbbell} label="Sets" value={weekSets} denom={weekAgg.setsT || undefined} tint={A.a}
-                      chart={<MiniBars data={perDaySets} color={A.a} />} onClick={() => setTab("progress")} />
-                    <MetricCard i={1} icon={Weight} label="Water" value={waterToday} denom={waterTarget} unit="ml" tint={C.vizMint}
-                      chart={<MiniSpark data={waterWeek.some(v => v) ? waterWeek : null} color={C.vizMint} />} onClick={() => setTab("fuel")} />
-                    <MetricCard i={2} icon={TrendingUp} label="Weight" value={latestWeight || 0} decimals={latestWeight && latestWeight % 1 ? 1 : 0} unit="kg" tint={C.vizMint}
-                      chart={<MiniSpark data={weightSpark.length >= 2 ? weightSpark : null} color={C.vizMint} />} onClick={() => setTab("progress")} />
-                    <MetricCard i={3} icon={Flame} label="Streak" value={wkStreak} unit={wkStreak === 1 ? "week" : "weeks"} tint={A.a} onClick={() => setTab("progress")} />
-                  </div>
-
-                  {/* up next */}
+                  {/* the one action — up next */}
                   {program ? (
-                    <div className="liquid-glass rounded-[28px] p-5 mb-4">
+                    <div className="reveal-3 liquid-glass rounded-[28px] p-5">
                       <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 13, color: C.dim }}>Up next</div>
                       <div className="flex items-center justify-between gap-3 mt-1">
                         <div className="min-w-0">
@@ -2281,70 +2257,12 @@ export default function BurnLabApp() {
                         : <GradBtn A={A} onClick={() => startSession(data.program, program.days[nextDayIdx])} className="mt-4 w-full flex items-center justify-center gap-2 rounded-full" style={{ height: 56, fontSize: 16 }}><Play size={18} fill="#0A0A0B" /> Start workout</GradBtn>}
                     </div>
                   ) : (
-                    <div className="liquid-glass rounded-[28px] p-5 mb-4">
+                    <div className="reveal-3 liquid-glass rounded-[28px] p-5">
                       <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>Pick your split</div>
-                      <p className="text-sm mt-1" style={{ color: C.dim }}>Choose a training program to unlock your first session.</p>
+                      <p className="text-sm mt-1" style={{ color: C.dim }}>Choose a program to unlock your first session.</p>
                       <GradBtn A={A} onClick={() => setTab("train")} className="mt-4 px-5 rounded-full text-sm" style={{ height: 48 }}>Choose a program</GradBtn>
                     </div>
                   )}
-
-                  {/* trophy teaser */}
-                  <button onClick={() => setTab("trophies")} className="liquid-glass bl-spring active:scale-[0.98] w-full text-left rounded-3xl p-4 mb-4 flex items-center gap-3">
-                    <span className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: C.yellow + "22" }}><Trophy size={19} color={C.yellow} /></span>
-                    <div className="flex-1 min-w-0">
-                      <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>Trophies</div>
-                      <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: C.card2 }}>
-                        <div className="h-full rounded-full" style={{ width: Math.round((troph.filter(t => t.done).length / troph.length) * 100) + "%", background: A.a }} />
-                      </div>
-                    </div>
-                    <span style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 18, color: C.text }}>{troph.filter(t => t.done).length}<span style={{ color: C.faint }}>/{troph.length}</span></span>
-                  </button>
-
-                  {/* muscle map entry */}
-                  {(() => {
-                    const hot = Object.entries(heatMap).filter(([, v]) => v.ratio > 1.1).length;
-                    const dormant = Object.entries(heatMap).filter(([, v]) => v.daysSince === Infinity || v.daysSince > 10).length;
-                    return (
-                      <button onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab("muscles"); }} className="liquid-glass bl-spring active:scale-[0.98] w-full text-left mb-4 rounded-3xl p-5 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 20, letterSpacing: "-0.02em", color: C.text }}>What's fired up</div>
-                          <div className="text-sm mt-1" style={{ color: C.dim }}>{hot} firing hot · {dormant} dormant · tap to inspect</div>
-                        </div>
-                        <ChevronRight size={22} color={C.faint} className="shrink-0" />
-                      </button>
-                    );
-                  })()}
-
-                  {/* quiet prompts */}
-                  {!weighedToday && data.profile && (
-                    <button onClick={() => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); }} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
-                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 40, height: 40, background: A.a + "1A" }}><Weight size={18} color={A.a} /></span>
-                      <div className="flex-1 min-w-0">
-                        <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>Log today's weigh-in</div>
-                        <div className="text-xs mt-0.5" style={{ color: C.dim }}>{weighStreak(weights) > 0 ? weighStreak(weights) + "-day streak going — keep it alive" : "Same time each day is most consistent"}</div>
-                      </div>
-                      <span className="text-xs font-semibold px-3 py-2 rounded-full shrink-0" style={{ background: A.a, color: "#0A0A0B" }}>Log</span>
-                    </button>
-                  )}
-                  {photoIsDue && data.settings.photoCadence !== "off" && (
-                    <button onClick={() => fileRef.current && fileRef.current.click()} className="liquid-glass bl-spring active:scale-[0.98] w-full rounded-3xl p-4 mb-3 flex items-center gap-3 text-left">
-                      <span className="shrink-0 rounded-full flex items-center justify-center" style={{ width: 40, height: 40, background: A.a + "1A" }}><Camera size={18} color={A.a} /></span>
-                      <div className="flex-1 min-w-0">
-                        <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>{photos.length ? "Progress photo due" : "Take your first progress photo"}</div>
-                        <div className="text-xs mt-0.5" style={{ color: C.dim }}>Same spot, same light, same pose.</div>
-                      </div>
-                      <span className="text-xs font-semibold px-3 py-2 rounded-full shrink-0" style={{ background: A.a, color: "#0A0A0B" }}>Snap</span>
-                    </button>
-                  )}
-
-                  {/* lab note */}
-                  <div className="liquid-glass rounded-3xl p-4 mb-2 flex gap-3">
-                    <Info size={18} color={A.a} className="shrink-0 mt-0.5" />
-                    <div>
-                      <div style={{ fontFamily: F.mono, fontSize: 10, color: C.dim, letterSpacing: 1.5 }}>LAB NOTE</div>
-                      <p className="text-sm mt-1" style={{ color: C.text }}>{scienceTip}</p>
-                    </div>
-                  </div>
                 </div>
                 );
               })()}
@@ -2866,7 +2784,54 @@ export default function BurnLabApp() {
               {/* ================= PROGRESS ================= */}
               {tab === "progress" && (
                 <div className="bl-fade">
-                  <ScreenHead eyebrow="Your trajectory" title="Progress" />
+                  {progressView ? (
+                    <div className="flex items-center gap-3 mb-5">
+                      <button onClick={() => setProgressView(null)} aria-label="Back to progress" className="bl-spring active:scale-90 flex items-center justify-center rounded-full shrink-0" style={{ width: 40, height: 40, background: C.card }}><ChevronLeft size={20} color={C.dim} /></button>
+                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 26, letterSpacing: "-0.02em", color: C.text }}>{({ bodyweight: "Bodyweight", strength: "Strength", volume: "Volume", records: "Records", photos: "Photos", habits: "Habits", history: "History" })[progressView]}</div>
+                    </div>
+                  ) : (
+                    <ScreenHead eyebrow="Your trajectory" title="Progress" />
+                  )}
+
+                  {!progressView && (() => {
+                    const exIds = [...new Set(data.history.flatMap(h => h.exercises.map(e => e.id)))];
+                    const bestPR = exIds.map(id => bestE1RM(data.history, id)).sort((a, b) => b - a)[0];
+                    const rows = [
+                      { key: "bodyweight", icon: Weight, label: "Bodyweight", hint: latestWeight ? fmtKg(latestWeight) + " kg" : "No weigh-ins yet" },
+                      { key: "strength", icon: Zap, label: "Strength", hint: data.history.length ? "e1RM over time" : "No data yet" },
+                      { key: "volume", icon: TrendingUp, label: "Volume", hint: data.history.length ? "Sets & tonnage" : "No data yet" },
+                      { key: "records", icon: Award, label: "Records", hint: bestPR ? Math.round(bestPR) + " kg best" : "No PRs yet" },
+                      { key: "photos", icon: Camera, label: "Photos", hint: photos.length + " stored" },
+                      { key: "habits", icon: CalendarDays, label: "Habits", hint: weekStreak(data.history) + " wk streak" },
+                      { key: "history", icon: Timer, label: "History", hint: data.history.length + (data.history.length === 1 ? " session" : " sessions") },
+                    ];
+                    const routes = [
+                      { icon: Flame, label: "Muscle map", hint: "What's fired up", go: () => setTab("muscles") },
+                      { icon: Trophy, label: "Trophies", hint: troph.filter(t => t.done).length + "/" + troph.length + " unlocked", go: () => setTab("trophies") },
+                    ];
+                    const Row = ({ r, onClick, i }) => {
+                      const Icon = r.icon;
+                      return (
+                        <button onClick={() => { if (data.settings.vibrate) haptic("tap"); onClick(); }} className="bl-stagger liquid-glass bl-spring active:scale-[0.98] w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 mb-2 text-left" style={{ "--i": i }}>
+                          <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 40, height: 40, background: A.a + "1A" }}><Icon size={18} color={A.a} /></span>
+                          <div className="flex-1 min-w-0">
+                            <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>{r.label}</div>
+                            <div className="text-xs truncate" style={{ color: C.dim }}>{r.hint}</div>
+                          </div>
+                          <ChevronRight size={20} color={C.faint} className="shrink-0" />
+                        </button>
+                      );
+                    };
+                    return (
+                      <div>
+                        {rows.map((r, i) => <Row key={r.key} r={r} i={i} onClick={() => setProgressView(r.key)} />)}
+                        <div style={{ height: 8 }} />
+                        {routes.map((r, i) => <Row key={r.label} r={r} i={rows.length + i} onClick={r.go} />)}
+                      </div>
+                    );
+                  })()}
+
+                  {progressView === "bodyweight" && (<>
                   <SectionLabel>WEIGHT TREND</SectionLabel>
                   <div className="liquid-glass rounded-3xl p-5 mb-4">
                     {(() => {
@@ -2970,7 +2935,9 @@ export default function BurnLabApp() {
                       </>
                     );
                   })()}
+                  </>)}
 
+                  {progressView === "habits" && (<>
                   {data.history.length > 0 && (() => {
                     // ---- workout calendar (month grid) + streak ----
                     const trainedDays = new Set(data.history.map(h => new Date(h.date).toDateString()));
@@ -3047,17 +3014,16 @@ export default function BurnLabApp() {
                     </div>
                     <p className="text-xs text-center mt-2" style={{ color: C.faint }}>Tap a muscle - color blends cold to hot based on recent training load vs your weekly target.</p>
                   </div>
+                  </>)}
 
-                  {data.history.length === 0 ? (
-                    <>
-                      <div className="liquid-glass rounded-3xl p-6 text-center mb-4">
-                        <TrendingUp size={28} color={C.faint} className="mx-auto mb-2" />
-                        <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>No data yet</div>
-                        <p className="text-sm mt-1" style={{ color: C.dim }}>Finish your first workout and your strength curves start here.</p>
-                      </div>
-                      <SectionLabel>PROGRESS PHOTOS</SectionLabel>
-                      {photoSection}
-                    </>
+                  {progressView === "photos" && photoSection}
+
+                  {progressView === "strength" && (data.history.length === 0 ? (
+                    <div className="liquid-glass rounded-3xl p-6 text-center">
+                      <TrendingUp size={28} color={C.faint} className="mx-auto mb-2" />
+                      <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>No data yet</div>
+                      <p className="text-sm mt-1" style={{ color: C.dim }}>Finish your first workout and your strength curves start here.</p>
+                    </div>
                   ) : (
                     <>
                       <SectionLabel>ESTIMATED 1RM PROGRESSION</SectionLabel>
@@ -3086,7 +3052,11 @@ export default function BurnLabApp() {
                           </div>
                         );
                       })()}
+                      </>))}
 
+                      {progressView === "volume" && (data.history.length === 0 ? (
+                        <div className="liquid-glass rounded-3xl p-6 text-center"><TrendingUp size={28} color={C.faint} className="mx-auto mb-2" /><div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>No data yet</div><p className="text-sm mt-1" style={{ color: C.dim }}>Log a session to see your volume.</p></div>
+                      ) : (<>
                       <SectionLabel>TRAINING VOLUME</SectionLabel>
                       {(() => {
                         const days = W_RANGES[progRange];
@@ -3190,7 +3160,11 @@ export default function BurnLabApp() {
                           </div>
                         );
                       })()}
+                      </>))}
 
+                      {progressView === "records" && (data.history.length === 0 ? (
+                        <div className="liquid-glass rounded-3xl p-6 text-center"><Award size={28} color={C.faint} className="mx-auto mb-2" /><div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 22, letterSpacing: "-0.02em", color: C.text }}>No PRs yet</div><p className="text-sm mt-1" style={{ color: C.dim }}>Your best estimated 1-rep maxes will land here.</p></div>
+                      ) : (<>
                       <SectionLabel>PERSONAL RECORDS · e1RM</SectionLabel>
                       <div className="liquid-glass rounded-3xl mb-5 overflow-hidden">
                         {[...new Set(data.history.flatMap(h => h.exercises.map(e => e.id)))]
@@ -3206,8 +3180,9 @@ export default function BurnLabApp() {
                             </div>
                           ))}
                       </div>
+                      </>))}
 
-                      {photoSection}
+                      {progressView === "history" && (<>
                       <SectionLabel>HISTORY</SectionLabel>
                       {(() => {
                         const groups = [];
@@ -3240,8 +3215,7 @@ export default function BurnLabApp() {
                           );
                         });
                       })()}
-                    </>
-                  )}
+                      </>)}
                 </div>
               )}
             </main>
@@ -3796,13 +3770,15 @@ export default function BurnLabApp() {
               const h = new Date().getHours();
               const meal = h < 11 ? "b" : h < 15 ? "l" : h < 21 ? "d" : "s";
               const openFood = () => { setTab("fuel"); setOverlay(null); setAddFor(meal); setAddStage("search"); setFoodQuery(""); };
+              const weighDue = !weighedToday && data.profile;
+              const photoDue = photoIsDue && data.settings.photoCadence !== "off";
               const acts = [
                 { icon: Play, label: "Start workout", sub: program ? "Jump into " + program.days[nextDayIdx].name : "Pick a split", run: () => { setTab("train"); setOverlay(null); } },
                 { icon: Utensils, label: "Log food", sub: "Search or quick-add macros", run: openFood },
                 { icon: ScanLine, label: "Scan barcode", sub: "Look up a packaged food", run: () => { openFood(); setScanNonce(n => n + 1); setScanOpen(true); } },
-                { icon: Weight, label: "Weigh in", sub: weighedToday ? "Update today's weight" : "Log today's weight", run: () => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); } },
-                { icon: Camera, label: "Add progress photo", sub: photos.length + " stored", run: () => { fileRef.current && fileRef.current.click(); } },
-              ];
+                { icon: Weight, label: "Weigh in", sub: weighDue ? "Due today" : "Update today's weight", due: weighDue, run: () => { setWeighVal(latestWeight ? String(latestWeight) : ""); setWeighOpen(true); } },
+                { icon: Camera, label: "Add progress photo", sub: photoDue ? "Due now" : photos.length + " stored", due: photoDue, run: () => { fileRef.current && fileRef.current.click(); } },
+              ].sort((a, b) => (b.due ? 1 : 0) - (a.due ? 1 : 0));
               return (
                 <div className="fixed inset-0 z-30 flex items-end justify-center" onClick={() => setFabOpen(false)} style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}>
                   <div className="w-full bl-fade" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, background: C.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, border: "1px solid " + C.line, boxShadow: SHADOW.hero, padding: SPACE[5], paddingBottom: "calc(env(safe-area-inset-bottom) + " + SPACE[5] + "px)" }}>
@@ -3817,13 +3793,13 @@ export default function BurnLabApp() {
                         return (
                           <button key={a.label} onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(false); a.run(); }}
                             className="bl-stagger w-full flex items-center gap-3 text-left transition-transform active:scale-[0.98]"
-                            style={{ "--i": i, background: C.card2, border: "1px solid " + C.line, borderRadius: RADIUS.md, padding: SPACE[3] }}>
-                            <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 42, height: 42, background: A.a + "1F", border: "1px solid " + A.a + "3A" }}><Icon size={19} color={A.a} /></span>
+                            style={{ "--i": i, background: C.card2, border: "1px solid " + (a.due ? C.vizMint + "66" : C.line), borderRadius: RADIUS.md, padding: SPACE[3] }}>
+                            <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 42, height: 42, background: (a.due ? C.vizMint : A.a) + "1F", border: "1px solid " + (a.due ? C.vizMint : A.a) + "3A" }}><Icon size={19} color={a.due ? C.vizMint : A.a} /></span>
                             <div className="flex-1 min-w-0">
                               <div className="font-bold text-[15px]" style={{ color: C.text }}>{a.label}</div>
-                              <div className="text-xs truncate" style={{ color: C.dim }}>{a.sub}</div>
+                              <div className="text-xs truncate" style={{ color: a.due ? C.vizMint : C.dim }}>{a.sub}</div>
                             </div>
-                            <ArrowUpRight size={16} color={C.faint} className="shrink-0" />
+                            {a.due ? <span className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: C.vizMint }} /> : <ArrowUpRight size={16} color={C.faint} className="shrink-0" />}
                           </button>
                         );
                       })}
@@ -3843,13 +3819,19 @@ export default function BurnLabApp() {
                   { id: "fuel", label: "Fuel", icon: Utensils },
                   { id: "progress", label: "Progress", icon: TrendingUp },
                 ].map((t, ti) => {
-                  if (t.fab) return (
-                    <button key="fab" onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(true); }} aria-label="Quick actions" aria-expanded={fabOpen}
-                      className="bl-fabglow bl-spring flex items-center justify-center rounded-full active:scale-[0.92]"
-                      style={{ width: 58, height: 58, marginTop: -26, background: AGV, border: "3px solid rgba(0,0,0,0.6)", "--fab-glow-weak": A.a + "60", "--fab-glow-strong": A.a + "a6" }}>
-                      <Plus size={27} color="#000" strokeWidth={2.8} />
+                  if (t.fab) {
+                    const dueCount = (!weighedToday && data.profile ? 1 : 0) + (photoIsDue && data.settings.photoCadence !== "off" ? 1 : 0);
+                    return (
+                    <button key="fab" onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(true); }} aria-label={dueCount ? "Quick actions, " + dueCount + " due" : "Quick actions"} aria-expanded={fabOpen}
+                      className="bl-metal-fab bl-spring relative flex items-center justify-center rounded-full active:scale-[0.92]"
+                      style={{ width: 60, height: 60, marginTop: -26 }}>
+                      <span className="flex items-center justify-center rounded-full" style={{ width: "100%", height: "100%", background: AGV }}>
+                        <Plus size={27} color="#000" strokeWidth={2.8} />
+                      </span>
+                      {dueCount > 0 && <span aria-hidden="true" className="absolute rounded-full" style={{ top: 2, right: 2, width: 12, height: 12, background: C.vizMint, border: "2px solid " + C.bg }} />}
                     </button>
-                  );
+                    );
+                  }
                   const active = tab === t.id;
                   const Icon = t.icon;
                   return (
