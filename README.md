@@ -2,6 +2,17 @@
 
 Science-based workout tracker built with Vite + React + Tailwind. Installable PWA with offline support. All data (profile, workouts, trophies) lives in the browser's localStorage on your device — no backend.
 
+## What's new in v9.1 — "Dashboard & Definition"
+
+A post-feedback pass sharpening the type, the insights and the anatomy — same Noir palette, same data model, storage keys `burnlab-data-v2` / `burnlab-photos-v1` untouched.
+
+- **New typography** — retired Plus Jakarta for a punchier pairing: **Space Grotesk** (self-hosted) carries the brand mark, the 3D cube glyphs and every display title/hero number; **Inter** (self-hosted) handles body text. Sentence case and the tabular-figure hero pattern are unchanged.
+- **Home insights** — the home screen gains a three-up stat row (this-week sessions vs goal, week streak, lifetime workouts) and a "Last workout" card (split · date · sets) that jumps into History — so the screen answers "how am I doing?" at a glance without losing the one-hero purge.
+- **Progress dashboard** — the Progress index is now a real dashboard: a Volume card (Sets ↔ Tonnage toggle + range pills), a Consistency heatmap (Monday-aligned week columns), a Recent-PRs card ("You hit N PRs" with the top three), and a quick-access tile grid (Bodyweight, Strength, Photos, Muscle map, History, Trophies). All aggregates keep the warm-up exclusion.
+- **Anatomical muscle map** — the old mannequin is replaced by a proper highlighted-muscle figure (front / back): traps, delts, pecs, biceps/triceps on the arms, abs, obliques, lats, lower back, glutes, quads, hamstrings and calves, each shaded cold-to-hot by recency-weighted training load. The heat data and tap-to-inspect are unchanged.
+- **"Log your sets" runner** — the workout runner gains a live session header (ticking time · running volume · completed sets) with front/back **muscle mini-figures** that light up as each group is worked, plus a per-exercise **Changes** line showing realized est.-1RM progression vs the last time that lift was trained. Warm-up exclusion, progression targets, plate math and the rest timer are all preserved.
+- **Progress-photo compare + share** — a new Compare mode picks any two photos into BEFORE/AFTER frames with date + weight captions, a hide-weight toggle, and a one-tap **Export / share** that composes both shots (cover-cropped to a matched frame) onto a BurnLab-branded card with an "N days apart" subtitle, via the native share sheet (download fallback). Photos never leave the device until you share.
+
 ## What's new in v9.0 — "Signature"
 
 A minimalism pass over the Noir system plus four signature moments. Same palette, same data — every feature and every byte of stored data (storage keys `burnlab-data-v2` / `burnlab-photos-v1`) is untouched.
