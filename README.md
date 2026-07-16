@@ -2,6 +2,16 @@
 
 Science-based workout tracker built with Vite + React + Tailwind. Installable PWA with offline support. All data (profile, workouts, trophies) lives in the browser's localStorage on your device — no backend.
 
+## What's new in v9.0 — "Signature"
+
+A minimalism pass over the Noir system plus four signature moments. Same palette, same data — every feature and every byte of stored data (storage keys `burnlab-data-v2` / `burnlab-photos-v1`) is untouched.
+
+- **The Purge (PUSHR-grade minimalism)** — one hero, one primary action per screen; everything else moved a tap deeper or cut. **Home** is now greeting → weekly ring → up-next → nav (metric cards, streak chip, muscle-map and lab-note gone). **Fuel** is a single calories-remaining hero, macros as a tap-to-expand line, a small water chip and minimal meal rows (name + kcal; macros on tap). **Progress** became an index of quiet rows (Bodyweight, Strength, Volume, Records, Photos, Habits, History + Muscle map, Trophies) that each open a focused detail with one chart — no more chart-stack scroll. The **runner** dropped labels the data already says. Weigh-in/photo prompts collapse into a dot-badge on the + button, expanded inside the sheet.
+- **3D cube identity** — the logo is an isometric cube with a **B** on the left face and **L** on the right, built from pure CSS 3D transforms. The splash rotates it in on the Y axis with a light-catch brightness sweep; a static version is the in-app header mark; the app icon set, favicon and splash colours were regenerated from it.
+- **Liquid-metal navigation** — the active tab sits under a gliding pill whose border is an animated chrome conic-gradient (a registered `--bl-angle` custom property drives the paint angle, so only the gradient rotates — no layout/filter work). The indicator springs between tabs; the ~15%-larger + button carries the same chrome ring permanently.
+- **Home reveal** — one choreographed entrance timeline (greeting → ring sweep + count-up → up-next → nav), skipped when Home is re-entered quickly, instant under reduced motion.
+- **Trophy achievement cards** — Trophies is a 2-column portrait-card grid. Each card shows artwork (from `/trophies/{id}.png`, with a graceful tier-icon fallback so it ships before any art exists), title, the value with its denominator, and a tier chip. Unlocked cards get a static chrome edge and full-colour art; locked cards are greyscale with a slim progress bar. The unlock moment in the workout summary rebuilds the earned cards with a one-shot chrome sheen sweep and a celebration haptic.
+
 ## What's new in v8.0 — "Noir"
 
 A complete visual rebuild on a flat near-black canvas (`#0A0A0B`) — no screen is recognisable from the old app, but every feature and every byte of stored data (storage keys `burnlab-data-v2` / `burnlab-photos-v1` and the data model) is untouched.
@@ -117,7 +127,7 @@ Local dev: `npm install`, then `npm run dev`.
 
 ## Updating after changes
 
-Bump `CACHE` in `public/sw.js` (currently `burnlab-v16`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
+Bump `CACHE` in `public/sw.js` (currently `burnlab-v17`) so phones with the installed app fetch the new version promptly. Keep this README updated with each release.
 
 ## Notes
 
