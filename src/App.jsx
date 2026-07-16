@@ -223,80 +223,78 @@ function blobPath(pts) {
   }
   return d + " Z";
 }
-const mirrorX = pts => pts.map(([x, y]) => [160 - x, y]);
-const SHOULDER_L = [[24, 50], [40, 45], [47, 55], [43, 71], [29, 74], [19, 63]];
-const CHEST_L = [[44, 58], [77, 55], [77, 90], [57, 96], [42, 86], [38, 70]];
-const ABS_PTS = [[65, 96], [95, 96], [93, 148], [80, 156], [67, 148]];
-const BICEP_L = [[21, 68], [37, 64], [40, 94], [34, 114], [21, 107]];
-const QUAD_L = [[51, 175], [75, 173], [77, 226], [69, 254], [55, 252], [50, 218]];
-const BACK_PTS = [[48, 54], [80, 49], [112, 54], [105, 108], [80, 128], [55, 108]];
-const TRICEP_L = [[21, 66], [38, 63], [41, 98], [35, 118], [21, 111]];
-const GLUTES_PTS = [[53, 147], [80, 141], [107, 147], [109, 177], [80, 185], [51, 177]];
-const HAM_L = [[53, 178], [75, 176], [77, 228], [69, 254], [57, 252], [51, 220]];
-const CALF_L = [[57, 261], [71, 259], [73, 298], [67, 323], [59, 321], [55, 295]];
+/* Anatomical figure — viewBox 200 x 470, centred on x=100. Muscle groups are
+   authored as right-side point blobs and mirrored, giving a symmetric, roughly
+   anatomically-placed highlighted-muscle chart (front / back). */
+const ANAT_W = 200, ANAT_H = 470;
+const mirrorX = pts => pts.map(([x, y]) => [ANAT_W - x, y]);
+const FOREARM_TINT = "#2E3440"; // decorative only — Forearms isn't a tracked muscle
+/* silhouette part-shapes (right arm/leg mirrored) */
+const TORSO_M = [[70, 88], [100, 82], [130, 88], [138, 112], [132, 150], [122, 210], [118, 250], [126, 286], [100, 300], [74, 286], [82, 250], [78, 210], [68, 150], [62, 112]];
+const TORSO_F = [[74, 90], [100, 84], [126, 90], [132, 112], [128, 150], [116, 206], [112, 244], [126, 288], [100, 302], [74, 288], [88, 244], [84, 206], [72, 150], [68, 112]];
+const ARM_L = [[64, 96], [52, 104], [46, 150], [44, 196], [40, 244], [42, 286], [50, 314], [58, 300], [58, 250], [62, 200], [66, 150], [70, 110]];
+const LEG_L = [[74, 292], [96, 300], [96, 360], [92, 412], [94, 452], [82, 462], [74, 452], [76, 410], [72, 360], [66, 304]];
+function BodySilhouette({ fem }) {
+  const torso = fem ? TORSO_F : TORSO_M;
+  return (
+    <g fill="#212530">
+      <ellipse cx="100" cy="42" rx="19" ry="23" />
+      <rect x="90" y="58" width="20" height="18" rx="7" />
+      <path d={blobPath(torso)} />
+      <path d={blobPath(ARM_L)} /><path d={blobPath(mirrorX(ARM_L))} />
+      <path d={blobPath(LEG_L)} /><path d={blobPath(mirrorX(LEG_L))} />
+      <circle cx="42" cy="316" r="9" /><circle cx="158" cy="316" r="9" />
+      <ellipse cx="82" cy="464" rx="12" ry="7" /><ellipse cx="118" cy="464" rx="12" ry="7" />
+    </g>
+  );
+}
+/* muscle blobs — right side authored, x >= 100 */
+const M_TRAP_F = [[100, 82], [120, 88], [124, 100], [108, 100], [100, 92]];
+const M_DELT = [[118, 92], [133, 98], [137, 120], [128, 130], [117, 116], [115, 98]];
+const M_PEC = [[100, 102], [121, 106], [128, 122], [119, 138], [103, 138], [100, 124]];
+const M_BICEP = [[140, 138], [152, 146], [151, 174], [143, 190], [136, 176], [138, 150]];
+const M_FORE = [[137, 200], [150, 208], [148, 244], [140, 266], [133, 250], [135, 214]];
+const M_ABS = [[100, 144], [113, 148], [114, 180], [108, 214], [100, 220]];
+const M_OBL = [[113, 152], [121, 160], [119, 196], [110, 212], [109, 178]];
+const M_QUAD = [[100, 296], [116, 302], [120, 344], [110, 392], [100, 388]];
+const M_QOUT = [[116, 304], [125, 318], [123, 358], [113, 390], [111, 346]];
+const M_SHIN = [[100, 416], [113, 420], [112, 448], [102, 456], [100, 436]];
+const M_TRAP_B = [[100, 80], [123, 88], [121, 116], [105, 124], [100, 104]];
+const M_LAT = [[100, 120], [121, 126], [125, 152], [114, 180], [100, 170]];
+const M_LOWBK = [[100, 172], [113, 178], [111, 206], [100, 214]];
+const M_TRI = [[140, 138], [152, 148], [150, 176], [142, 192], [135, 178], [138, 150]];
+const M_GLUTE = [[100, 220], [123, 224], [127, 252], [114, 278], [100, 272]];
+const M_HAM = [[100, 296], [116, 302], [120, 342], [110, 388], [100, 384]];
+const M_CALF = [[100, 414], [113, 418], [115, 442], [103, 460], [100, 436]];
+const both = pts => [pts, mirrorX(pts)];
 const MUSCLE_REGIONS = {
   front: [
-    { m: "Shoulders", pts: SHOULDER_L }, { m: "Shoulders", pts: mirrorX(SHOULDER_L) },
-    { m: "Chest", pts: CHEST_L }, { m: "Chest", pts: mirrorX(CHEST_L) },
-    { m: "Biceps", pts: BICEP_L }, { m: "Biceps", pts: mirrorX(BICEP_L) },
-    { m: "Abs", pts: ABS_PTS },
-    { m: "Quads", pts: QUAD_L }, { m: "Quads", pts: mirrorX(QUAD_L) },
+    ...both(M_TRAP_F).map(pts => ({ m: "Shoulders", pts })),
+    ...both(M_DELT).map(pts => ({ m: "Shoulders", pts })),
+    ...both(M_PEC).map(pts => ({ m: "Chest", pts })),
+    ...both(M_BICEP).map(pts => ({ m: "Biceps", pts })),
+    ...both(M_FORE).map(pts => ({ m: "Forearms", pts })),
+    ...both(M_ABS).map(pts => ({ m: "Abs", pts })),
+    ...both(M_OBL).map(pts => ({ m: "Abs", pts })),
+    ...both(M_QUAD).map(pts => ({ m: "Quads", pts })),
+    ...both(M_QOUT).map(pts => ({ m: "Quads", pts })),
+    ...both(M_SHIN).map(pts => ({ m: "Calves", pts })),
   ],
   back: [
-    { m: "Shoulders", pts: SHOULDER_L }, { m: "Shoulders", pts: mirrorX(SHOULDER_L) },
-    { m: "Back", pts: BACK_PTS },
-    { m: "Triceps", pts: TRICEP_L }, { m: "Triceps", pts: mirrorX(TRICEP_L) },
-    { m: "Glutes", pts: GLUTES_PTS },
-    { m: "Hamstrings", pts: HAM_L }, { m: "Hamstrings", pts: mirrorX(HAM_L) },
-    { m: "Calves", pts: CALF_L }, { m: "Calves", pts: mirrorX(CALF_L) },
+    ...both(M_TRAP_B).map(pts => ({ m: "Shoulders", pts })),
+    ...both(M_DELT).map(pts => ({ m: "Shoulders", pts })),
+    ...both(M_LAT).map(pts => ({ m: "Back", pts })),
+    ...both(M_LOWBK).map(pts => ({ m: "Back", pts })),
+    ...both(M_TRI).map(pts => ({ m: "Triceps", pts })),
+    ...both(M_FORE).map(pts => ({ m: "Forearms", pts })),
+    ...both(M_GLUTE).map(pts => ({ m: "Glutes", pts })),
+    ...both(M_HAM).map(pts => ({ m: "Hamstrings", pts })),
+    ...both(M_CALF).map(pts => ({ m: "Calves", pts })),
   ],
 };
-/* Limbs built as stacks of overlapping, decreasing-radius circles rather than
-   uniform-width rects - gives a tapered, fleshed-out look instead of a stick
-   figure (same flat fill, no seams since the circles blend into one shape). */
-/* Each limb = 2 generously-overlapping ellipses (upper + lower segment) plus
-   a hand/foot cap - same blending trick as the torso, but with wide overlap
-   margins so the taper reads as one continuous limb, not a bead chain. */
-function Limb({ upper, lower, foot }) {
-  return (
-    <>
-      <ellipse cx={upper[0]} cy={upper[1]} rx={upper[2]} ry={upper[3]} />
-      <ellipse cx={lower[0]} cy={lower[1]} rx={lower[2]} ry={lower[3]} />
-      <ellipse cx={foot[0]} cy={foot[1]} rx={foot[2]} ry={foot[3]} />
-    </>
-  );
-}
-function BodySilhouette({ fem }) {
-  return fem ? (
-    <g fill="#262A34">
-      <ellipse cx="80" cy="24" rx="16" ry="18" />
-      <rect x="71" y="39" width="18" height="12" rx="5" />
-      <ellipse cx="80" cy="58" rx="37" ry="14" />
-      <ellipse cx="80" cy="80" rx="29" ry="24" />
-      <ellipse cx="80" cy="120" rx="18" ry="24" />
-      <ellipse cx="80" cy="154" rx="31" ry="25" />
-      <Limb upper={[30, 92, 12, 34]} lower={[28, 138, 8.5, 30]} foot={[32, 172, 8, 9]} />
-      <Limb upper={[130, 92, 12, 34]} lower={[132, 138, 8.5, 30]} foot={[128, 172, 8, 9]} />
-      <Limb upper={[63, 200, 17, 38]} lower={[65, 278, 9.5, 44]} foot={[64, 332, 13, 7]} />
-      <Limb upper={[97, 200, 17, 38]} lower={[95, 278, 9.5, 44]} foot={[96, 332, 13, 7]} />
-    </g>
-  ) : (
-    <g fill="#262A34">
-      <ellipse cx="80" cy="24" rx="16" ry="18" />
-      <rect x="71" y="39" width="18" height="12" rx="5" />
-      <ellipse cx="80" cy="58" rx="46" ry="15" />
-      <ellipse cx="80" cy="82" rx="37" ry="27" />
-      <ellipse cx="80" cy="122" rx="24" ry="25" />
-      <ellipse cx="80" cy="155" rx="29" ry="24" />
-      <Limb upper={[23, 96, 15, 38]} lower={[20, 148, 10.5, 36]} foot={[25, 180, 10, 11]} />
-      <Limb upper={[137, 96, 15, 38]} lower={[140, 148, 10.5, 36]} foot={[135, 180, 10, 11]} />
-      <Limb upper={[63, 205, 19, 42]} lower={[65, 290, 11, 50]} foot={[63, 346, 14, 8]} />
-      <Limb upper={[97, 205, 19, 42]} lower={[95, 290, 11, 50]} foot={[97, 346, 14, 8]} />
-    </g>
-  );
-}
 /* mode="pick": selected muscles glow `accent`, tap toggles via onToggle.
-   mode="heat": every region colored by heatMap[muscle] = { ratio, daysSince }. */
+   mode="heat": every region colored by heatMap[muscle] = { ratio, daysSince }.
+   Forearms are decorative (not tracked) — always a muted static tint, no tap. */
 function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size = 190 }) {
   const [view, setView] = useState("front");
   const [tap, setTap] = useState(null);
@@ -311,19 +309,22 @@ function AnatomyBody({ fem, mode, selected = [], onToggle, accent, heatMap, size
           </button>
         ))}
       </div>
-      <svg width={size} height={Math.round(size * 366 / 160)} viewBox="0 0 160 366" role="img" aria-label={view + " body diagram"}>
+      <svg width={size} height={Math.round(size * ANAT_H / ANAT_W)} viewBox={"0 0 " + ANAT_W + " " + ANAT_H} role="img" aria-label={view + " body diagram"}>
         <BodySilhouette fem={fem} />
         {regions.map((r, i) => {
+          const deco = r.m === "Forearms";
           const picked = mode === "pick" && selected.includes(r.m);
-          const hot = mode === "heat" && heatMap && heatMap[r.m] && heatMap[r.m].ratio > 1.1;
-          const color = mode === "pick" ? accent : heatColor((heatMap && heatMap[r.m] && heatMap[r.m].ratio) || 0, MUSCLES[r.m]);
-          const fillOpacity = mode === "pick" ? (picked ? 0.92 : 0.12) : 0.92;
+          const hot = !deco && mode === "heat" && heatMap && heatMap[r.m] && heatMap[r.m].ratio > 1.1;
+          const color = deco ? FOREARM_TINT
+            : mode === "pick" ? accent
+            : heatColor((heatMap && heatMap[r.m] && heatMap[r.m].ratio) || 0, MUSCLES[r.m]);
+          const fillOpacity = deco ? 1 : mode === "pick" ? (picked ? 0.92 : 0.12) : 0.9;
           return (
             <path key={r.m + i} d={blobPath(r.pts)} fill={color} fillOpacity={fillOpacity}
-              stroke={mode === "pick" && !picked ? "none" : "#00000055"} strokeWidth="1" strokeLinejoin="round"
-              className={hot ? "bl-pulse" : ""} style={{ cursor: "pointer", filter: hot ? "drop-shadow(0 0 6px " + color + "aa)" : "none" }}
+              stroke={deco ? "none" : mode === "pick" && !picked ? "none" : "#00000055"} strokeWidth="1" strokeLinejoin="round"
+              className={hot ? "bl-pulse" : ""} style={{ cursor: deco ? "default" : "pointer", filter: hot ? "drop-shadow(0 0 6px " + color + "aa)" : "none" }}
               role="button" aria-label={r.m}
-              onClick={() => (mode === "pick" ? onToggle && onToggle(r.m) : setTap(r.m))} />
+              onClick={deco ? undefined : () => (mode === "pick" ? onToggle && onToggle(r.m) : setTap(r.m))} />
           );
         })}
       </svg>
