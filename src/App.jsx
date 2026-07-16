@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar, CartesianGrid,
@@ -1643,6 +1643,8 @@ export default function BurnLabApp() {
   const scanCtl = useRef(null);
   const [weighVal, setWeighVal] = useState("");
   const [progressView, setProgressView] = useState(null); // null = index; else a detail key
+  const navRef = useRef(null);
+  const [navInd, setNavInd] = useState(null); // {x, w} of the gliding active-tab indicator
   const [weightRange, setWeightRange] = useState("1M");
   const [progRange, setProgRange] = useState("1M");     // volume/sets analytics range
   const [progMetric, setProgMetric] = useState("sets"); // 'sets' | 'volume'
@@ -1981,6 +1983,17 @@ export default function BurnLabApp() {
   }, [restLeft, rest === null]);
 
   useEffect(() => { vibrateEnabled = !!data.settings.vibrate; }, [data.settings.vibrate]);
+
+  /* Liquid-metal nav: measure the active tab so the chrome indicator can glide to it. */
+  useLayoutEffect(() => {
+    const c = navRef.current;
+    if (!c) return;
+    const el = c.querySelector('[data-tab="' + tab + '"]');
+    if (!el) return;
+    const pr = c.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    setNavInd({ x: r.left - pr.left, w: r.width });
+  }, [tab, data.profile]);
 
   const A = ACCENTS[data.settings.accent] || ACCENTS.ember;
   const AG = "linear-gradient(90deg," + A.a + "," + A.b + ")";
@@ -3755,9 +3768,13 @@ export default function BurnLabApp() {
               );
             })()}
 
-            {/* ======= BOTTOM NAV — floating liquid-glass island ======= */}
-            <nav className="fixed left-1/2 -translate-x-1/2 w-full z-10 px-4" style={{ maxWidth: 448, bottom: "calc(env(safe-area-inset-bottom) + 24px)" }}>
-              <div className="liquid-glass flex items-center justify-between px-3 py-2 rounded-full" style={{ backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
+            {/* ======= BOTTOM NAV — floating island with a liquid-metal chrome indicator ======= */}
+            <nav className="reveal-nav fixed left-1/2 -translate-x-1/2 w-full z-10 px-4" style={{ maxWidth: 448, bottom: "calc(env(safe-area-inset-bottom) + 24px)" }}>
+              <div ref={navRef} className="liquid-glass relative flex items-center justify-between px-3 py-2 rounded-full" style={{ backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
+                {/* gliding chrome indicator behind the active tab */}
+                {navInd && (
+                  <div className="bl-ring" aria-hidden="true" style={{ position: "absolute", top: "50%", left: 0, height: 46, width: navInd.w, borderRadius: 9999, background: C.card2, transform: "translate(" + navInd.x + "px, -50%)", transition: "transform 0.5s cubic-bezier(0.34,1.56,0.64,1), width 0.4s cubic-bezier(0.34,1.56,0.64,1)", zIndex: 0 }} />
+                )}
                 {[
                   { id: "home", label: "Home", icon: Home },
                   { id: "train", label: "Train", icon: Dumbbell },
@@ -3770,22 +3787,21 @@ export default function BurnLabApp() {
                     return (
                     <button key="fab" onClick={() => { if (data.settings.vibrate) haptic("tap"); setFabOpen(true); }} aria-label={dueCount ? "Quick actions, " + dueCount + " due" : "Quick actions"} aria-expanded={fabOpen}
                       className="bl-metal-fab bl-spring relative flex items-center justify-center rounded-full active:scale-[0.92]"
-                      style={{ width: 60, height: 60, marginTop: -26 }}>
+                      style={{ width: 62, height: 62, marginTop: -26, zIndex: 1 }}>
                       <span className="flex items-center justify-center rounded-full" style={{ width: "100%", height: "100%", background: AGV }}>
-                        <Plus size={27} color="#000" strokeWidth={2.8} />
+                        <Plus size={28} color="#000" strokeWidth={2.8} />
                       </span>
-                      {dueCount > 0 && <span aria-hidden="true" className="absolute rounded-full" style={{ top: 2, right: 2, width: 12, height: 12, background: C.vizMint, border: "2px solid " + C.bg }} />}
+                      {dueCount > 0 && <span aria-hidden="true" className="absolute rounded-full" style={{ top: 3, right: 3, width: 12, height: 12, background: C.vizMint, border: "2px solid " + C.bg }} />}
                     </button>
                     );
                   }
                   const active = tab === t.id;
                   const Icon = t.icon;
                   return (
-                    <button key={t.id} onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab(t.id); setOverlay(null); }} aria-label={t.label} aria-current={active ? "page" : undefined}
-                      className="bl-spring flex flex-col items-center justify-center rounded-full active:scale-90"
-                      style={{ width: 46, height: 46, background: active ? AGV : "transparent", boxShadow: active ? "0 0 16px " + A.a + "66" : "none", opacity: active ? 1 : 0.45 }}>
-                      <Icon size={20} color={active ? "#000" : C.dim} strokeWidth={active ? 2.6 : 2} />
-                      {!active && <span style={{ fontFamily: F.mono, fontSize: 7, letterSpacing: 0.5, color: C.faint, marginTop: 1 }}>{t.label.toUpperCase()}</span>}
+                    <button key={t.id} data-tab={t.id} onClick={() => { if (data.settings.vibrate) haptic("tap"); setTab(t.id); setOverlay(null); }} aria-label={t.label} aria-current={active ? "page" : undefined}
+                      className="bl-spring relative flex items-center justify-center rounded-full active:scale-90"
+                      style={{ width: 46, height: 46, zIndex: 1 }}>
+                      <Icon size={21} color={active ? A.a : C.faint} strokeWidth={active ? 2.6 : 2} />
                     </button>
                   );
                 })}
