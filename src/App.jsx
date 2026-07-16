@@ -2816,39 +2816,126 @@ export default function BurnLabApp() {
                   )}
 
                   {!progressView && (() => {
-                    const exIds = [...new Set(data.history.flatMap(h => h.exercises.map(e => e.id)))];
-                    const bestPR = exIds.map(id => bestE1RM(data.history, id)).sort((a, b) => b - a)[0];
-                    const rows = [
-                      { key: "bodyweight", icon: Weight, label: "Bodyweight", hint: latestWeight ? fmtKg(latestWeight) + " kg" : "No weigh-ins yet" },
-                      { key: "strength", icon: Zap, label: "Strength", hint: data.history.length ? "e1RM over time" : "No data yet" },
-                      { key: "volume", icon: TrendingUp, label: "Volume", hint: data.history.length ? "Sets & tonnage" : "No data yet" },
-                      { key: "records", icon: Award, label: "Records", hint: bestPR ? Math.round(bestPR) + " kg best" : "No PRs yet" },
-                      { key: "photos", icon: Camera, label: "Photos", hint: photos.length + " stored" },
-                      { key: "habits", icon: CalendarDays, label: "Habits", hint: weekStreak(data.history) + " wk streak" },
-                      { key: "history", icon: Timer, label: "History", hint: data.history.length + (data.history.length === 1 ? " session" : " sessions") },
+                    const days = W_RANGES[progRange];
+                    const cutoff = Date.now() - days * 864e5;
+                    const inRange = data.history.filter(h => new Date(h.date).getTime() >= cutoff);
+                    const isVol = progMetric === "volume";
+                    const valOf = h => isVol ? h.exercises.reduce((t, e) => t + e.sets.reduce((a, s) => a + s.w * s.r, 0), 0) : h.exercises.reduce((a, e) => a + e.sets.length, 0);
+                    const byWeek = days > 45;
+                    const buckets = {};
+                    for (const h of inRange) { const d = new Date(h.date); let key; if (byWeek) { const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); key = m.toISOString().slice(0, 10); } else key = new Date(h.date).toISOString().slice(0, 10); buckets[key] = (buckets[key] || 0) + valOf(h); }
+                    const pts = Object.entries(buckets).sort().map(([k, v]) => ({ d: dayLabel(k), v: Math.round(v) }));
+                    const total = inRange.reduce((a, h) => a + valOf(h), 0);
+                    const unit = isVol ? "kg" : "sets";
+                    // consistency heatmap — Monday-aligned week columns across the range
+                    const trainedDays = new Set(data.history.map(h => new Date(h.date).toDateString()));
+                    const start = new Date(cutoff); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+                    const today = new Date(); today.setHours(0, 0, 0, 0);
+                    const weeks = []; let cw = new Date(start);
+                    while (cw <= today && weeks.length < 60) { const col = []; for (let d = 0; d < 7; d++) { const dd = new Date(cw); dd.setDate(cw.getDate() + d); col.push(dd); } weeks.push(col); cw = new Date(cw); cw.setDate(cw.getDate() + 7); }
+                    const trainedInRange = inRange.length;
+                    const perWeek = weeks.length ? (trainedInRange / weeks.length).toFixed(1) : "0";
+                    // recent PRs — each time an exercise beats its running-max e1RM
+                    const prs = [];
+                    for (const id of [...new Set(data.history.flatMap(h => h.exercises.map(e => e.id)))]) {
+                      let max = 0;
+                      for (const h of data.history) { const e = h.exercises.find(x => x.id === id); if (!e) continue; const best = Math.max(0, ...e.sets.filter(s => !s.warmup).map(s => e1rm(s.w, s.r))); if (best > max + 0.01) { max = best; prs.push({ id, e1: best, date: h.date }); } }
+                    }
+                    prs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    const tiles = [
+                      { key: "bodyweight", icon: Weight, label: "Bodyweight", go: () => setProgressView("bodyweight") },
+                      { key: "strength", icon: Zap, label: "Strength", go: () => setProgressView("strength") },
+                      { key: "photos", icon: Camera, label: "Photos", go: () => setProgressView("photos") },
+                      { key: "muscles", icon: Flame, label: "Muscle map", go: () => setTab("muscles") },
+                      { key: "history", icon: Timer, label: "History", go: () => setProgressView("history") },
+                      { key: "trophies", icon: Trophy, label: "Trophies", go: () => setTab("trophies") },
                     ];
-                    const routes = [
-                      { icon: Flame, label: "Muscle map", hint: "What's fired up", go: () => setTab("muscles") },
-                      { icon: Trophy, label: "Trophies", hint: troph.filter(t => t.done).length + "/" + troph.length + " unlocked", go: () => setTab("trophies") },
-                    ];
-                    const Row = ({ r, onClick, i }) => {
-                      const Icon = r.icon;
-                      return (
-                        <button onClick={() => { if (data.settings.vibrate) haptic("tap"); onClick(); }} className="bl-stagger liquid-glass bl-spring active:scale-[0.98] w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 mb-2 text-left" style={{ "--i": i }}>
-                          <span className="flex items-center justify-center rounded-full shrink-0" style={{ width: 40, height: 40, background: A.a + "1A" }}><Icon size={18} color={A.a} /></span>
-                          <div className="flex-1 min-w-0">
-                            <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>{r.label}</div>
-                            <div className="text-xs truncate" style={{ color: C.dim }}>{r.hint}</div>
-                          </div>
-                          <ChevronRight size={20} color={C.faint} className="shrink-0" />
-                        </button>
-                      );
-                    };
                     return (
                       <div>
-                        {rows.map((r, i) => <Row key={r.key} r={r} i={i} onClick={() => setProgressView(r.key)} />)}
-                        <div style={{ height: 8 }} />
-                        {routes.map((r, i) => <Row key={r.label} r={r} i={rows.length + i} onClick={r.go} />)}
+                        {/* range */}
+                        <div className="flex gap-1 mb-3">
+                          {Object.keys(W_RANGES).map(r => (
+                            <button key={r} onClick={() => setProgRange(r)} className="flex-1 py-1.5 rounded-full text-xs font-bold transition-colors"
+                              style={{ background: progRange === r ? C.text : C.card2, color: progRange === r ? "#0A0A0B" : C.dim }}>{r}</button>
+                          ))}
+                        </div>
+
+                        {/* volume */}
+                        <div className="liquid-glass rounded-3xl p-5 mb-3">
+                          <div className="flex items-start justify-between mb-1">
+                            <button onClick={() => setProgMetric(isVol ? "sets" : "volume")} className="flex items-center gap-1" style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>{isVol ? "Tonnage" : "Sets"} <ChevronDown size={15} color={C.dim} /></button>
+                            <div className="text-right">
+                              <div style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: 1.5 }}>TOTAL</div>
+                              <div style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 20, letterSpacing: "-0.02em", color: C.text }}>{fmtNum(total)} <span style={{ fontSize: 12, color: C.dim }}>{unit}</span></div>
+                            </div>
+                          </div>
+                          {pts.length >= 1 ? (
+                            <div className="-mx-1 mt-1">
+                              <ResponsiveContainer width="100%" height={150}>
+                                <BarChart data={pts} margin={{ top: 8, right: 6, left: -20, bottom: 0 }}>
+                                  <defs><linearGradient id="blDashBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={A.b} /><stop offset="100%" stopColor={A.a} stopOpacity={0.5} /></linearGradient></defs>
+                                  <XAxis dataKey="d" tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} minTickGap={18} />
+                                  <YAxis tick={{ fontSize: 10, fill: C.dim, fontFamily: F.mono }} axisLine={false} tickLine={false} />
+                                  <Tooltip cursor={{ fill: C.line + "55" }} contentStyle={{ background: C.card2, border: "none", borderRadius: 12, fontFamily: F.mono, fontSize: 12, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.7)" }} formatter={v => [fmtNum(v) + " " + unit, byWeek ? "week" : "session"]} />
+                                  <Bar dataKey="v" fill="url(#blDashBar)" radius={[6, 6, 0, 0]} maxBarSize={26} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          ) : <p className="text-sm my-6 text-center" style={{ color: C.dim }}>No sessions in this range.</p>}
+                        </div>
+
+                        {/* consistency */}
+                        <div className="liquid-glass rounded-3xl p-5 mb-3">
+                          <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>Consistency</div>
+                          <div className="mb-3" style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>{trainedInRange}/{weeks.length * 7} days · {perWeek}×/week</div>
+                          <div className="flex gap-1 overflow-x-auto pb-1">
+                            {weeks.map((col, wi) => (
+                              <div key={wi} className="flex flex-col gap-1" style={{ flex: weeks.length <= 20 ? "1 1 0" : "0 0 12px" }}>
+                                {col.map((dd, di) => {
+                                  const future = dd > today;
+                                  const on = trainedDays.has(dd.toDateString());
+                                  return <div key={di} style={{ aspectRatio: "1 / 1", borderRadius: 3, background: future ? "transparent" : on ? A.a : C.card2, boxShadow: on ? "0 0 6px " + A.a + "55" : "none", minHeight: 8 }} />;
+                                })}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* recent PRs */}
+                        <div className="liquid-glass rounded-3xl p-5 mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 15, color: C.text }}>Recent PRs</div>
+                            <button onClick={() => setProgressView("records")} className="text-sm font-semibold" style={{ color: A.a }}>View all</button>
+                          </div>
+                          <div className="mb-3" style={{ fontFamily: F.mono, fontSize: 11, color: C.dim }}>You hit {prs.length} {prs.length === 1 ? "PR" : "PRs"}</div>
+                          {prs.length === 0 ? (
+                            <p className="text-sm" style={{ color: C.dim }}>Log a workout and your PRs land here.</p>
+                          ) : prs.slice(0, 3).map((p, i, arr) => (
+                            <div key={p.id + p.date} className="flex items-center justify-between py-2" style={{ borderTop: i > 0 ? "1px solid " + C.line : "none" }}>
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <Award size={16} color={i === 0 ? C.yellow : C.faint} className="shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="text-sm font-semibold truncate" style={{ color: C.text }}>{EX[p.id] ? EX[p.id].name : p.id}</div>
+                                  <div style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>{dayLabel(p.date)}</div>
+                                </div>
+                              </div>
+                              <span className="shrink-0" style={{ fontFamily: F.disp, fontWeight: 700, fontSize: 17, color: C.text }}>{Math.round(p.e1)}<span style={{ fontSize: 11, color: C.dim, fontWeight: 400 }}> kg</span></span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* quick access */}
+                        <div className="grid grid-cols-3 gap-2.5">
+                          {tiles.map((t, i) => {
+                            const Icon = t.icon;
+                            return (
+                              <button key={t.key} onClick={() => { if (data.settings.vibrate) haptic("tap"); t.go(); }} className="bl-stagger liquid-glass bl-spring active:scale-[0.97] flex flex-col items-center justify-center gap-2 rounded-2xl py-4" style={{ "--i": i }}>
+                                <span className="flex items-center justify-center rounded-full" style={{ width: 38, height: 38, background: A.a + "1A" }}><Icon size={17} color={A.a} /></span>
+                                <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.text }}>{t.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })()}
