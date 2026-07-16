@@ -36,9 +36,9 @@ const C = {
    legible numerals at 40px+, tight wordmark at 800). Doto (dot-matrix) is the single borrowed
    brutalist signature, used ONLY for the rest-timer countdown. IBM Plex Mono for tiny data labels. */
 const F = {
-  brand: "'Plus Jakarta Sans', sans-serif",
-  disp: "'Plus Jakarta Sans', sans-serif",
-  body: "'Plus Jakarta Sans', sans-serif",
+  brand: "'Space Grotesk', sans-serif",
+  disp: "'Space Grotesk', sans-serif",
+  body: "'Inter', sans-serif",
   timer: "'Doto', 'IBM Plex Mono', monospace",
   mono: "'IBM Plex Mono', monospace",
 };
